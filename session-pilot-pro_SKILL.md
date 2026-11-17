@@ -1,9 +1,9 @@
 ---
 name: session-pilot-pro-plus
-description: Professional, token-aware session memory & skill router. Adds agent-side token budgeting, optional micro-skills, tool-prune, loop-guard, and lightweight search/persistence helpers. Prompt-only; no external dependencies.
+description: Professional, token-aware session memory & skill router. Adds agent-side token budgeting, experience learning, rate-limit model fallback, optional micro-skills, tool-prune, loop-guard, and lightweight search/persistence helpers. Prompt-only; no external dependencies.
 license: MIT
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Session Pilot Pro Plus
@@ -13,7 +13,7 @@ A lightweight core (< 200 tokens) that **recalls**, **routes**, **checkpoints**,
 All `SP` commands are **chat conventions**: the user types them in conversation and the agent performs the described behavior. They are not shell commands, and this skill ships no executable code.
 
 ## Core Commands (always loaded)
-1. **Recall** – `SP recall [--session ID]` – restores prior chat state or starts a fresh session.
+1. **Recall** – `SP recall [--session ID]` – restores prior chat state (including learned facts) or starts a fresh session.
 2. **Route** – `SP find "<keywords>"` – selects the best installed skill. Returns `match: strong|weak|none`.
 3. **Checkpoint** – `SP save --done "<action>" --next "<step>"` – stores progress for later resumption.
 4. **Import** – `SP import <PATH>` – wires project-level rules into the session.
@@ -54,6 +54,17 @@ These additions are **opt-in**: they are only loaded when you invoke the corresp
 ### Micro-Skill Router (inspired by session-pilot-lite)
 - Simple keyword-based routing rules. No extra tokens when not used.
 
+### Experience Learning
+- `SP learn [--review]` – distills durable facts and lessons from the current session (repeated failures, fixes, repo conventions) into the per-project persistent store. With `--review`, scans recent turns for patterns worth keeping.
+- Learned facts load automatically on the next `SP recall`, so mistakes are not repeated across sessions.
+- Runs inline — no separate review model call.
+- **Cost:** ~40 tokens per learning pass (estimate).
+
+### Rate-Limit Model Fallback
+- `SP fallback --chain "<model-1,model-2,…>"` – registers an ordered fallback chain. When a rate limit or usage limit error hits, the agent switches to the next model in the chain and retries the same step; checkpoint state (`SP save`) ensures no work is lost.
+- **Disabled by default**; requires a host agent that can switch models mid-session. If the host cannot switch, report the limit and suggest resuming later instead.
+- **Cost:** ~30 tokens to describe the chain; nothing when never triggered (estimate).
+
 ## Token-Budget Mechanics
 - The **budget** command is an **agent-side estimate** — no external tokenizer, library, or model call is involved. The agent counts words in the upcoming user prompt, the accumulated context, and any loaded sub-skill descriptors, and multiplies by ~1.33.
 - If `estimated_total > limit`, the skill returns:
@@ -73,7 +84,9 @@ These additions are **opt-in**: they are only loaded when you invoke the corresp
 | Token-budget check | +30 |
 | Semantic index (once) | +140 |
 | Persistent store init | +50 |
-| **Maximum** (all extras) | **~410** |
+| Learning pass | +40 |
+| Fallback chain setup | +30 |
+| **Maximum** (all extras) | **~480** |
 
 ## Usage Example
 ```text
@@ -89,6 +102,8 @@ SP save --done "generated endpoint" --next "write tests"
 - **Semantic search** – large codebases where keyword routing misses relevant files.
 - **Persistent store** – need to remember a flag (e.g., chosen framework) across sessions.
 - **Unified memory** – multi-agent pipelines that share context.
+- **Experience learning** – recurring projects where the same mistakes keep costing turns.
+- **Model fallback** – metered plans or long sessions likely to hit rate/usage limits.
 - All are **opt-in**: if you never call them, they never add tokens.
 
 ---
