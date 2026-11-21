@@ -228,6 +228,14 @@ TokenEconomizer publishes measured results (18.4–30.9% lower mean cost on SWE-
 - Benchmark contributions (measured token/cost comparisons) are especially welcome.
 - Open a Pull Request with a clear description.
 
+## Documentation
+
+| File | Purpose |
+|---|---|
+| [`STORAGE_ADAPTERS.md`](STORAGE_ADAPTERS.md) | Interface & reference implementations for real persistence (JSON, SQLite, UPSTASH, IndexedDB) |
+| [`EVALUATION.md`](EVALUATION.md) | 25 test prompts to verify every capability works |
+| [`COMPATIBILITY.md`](COMPATIBILITY.md) | Agent support matrix — which commands work on OpenCode, Claude Code, Codex, Cursor, web agents, etc. |
+
 ## License
 
 MIT © 2026 deProfessori (declared in the skill frontmatter).
