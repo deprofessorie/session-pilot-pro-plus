@@ -3,7 +3,7 @@ name: session-pilot-pro-plus
 description: Professional, token-aware session memory & skill router. Adds agent-side token budgeting, experience learning, rate-limit model fallback, optional micro-skills, tool-prune, loop-guard, and lightweight search/persistence helpers. Prompt-only; no external dependencies.
 license: MIT
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # Session Pilot Pro Plus
