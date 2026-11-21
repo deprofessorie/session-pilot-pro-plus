@@ -15,7 +15,7 @@ All `SP` commands are **chat conventions**: the user types them in conversation 
 ## Core Commands (always loaded)
 1. **Recall** – `SP recall [--session ID]` – restores prior chat state (including learned facts) or starts a fresh session.
 2. **Route** – `SP find "<keywords>"` – selects the best installed skill. Returns `match: strong|weak|none`.
-3. **Checkpoint** – `SP save --done "<action>" --next "<step>"` – stores progress for later resumption.
+3. **Checkpoint** – `SP save --done "<action>" --next "<step>" [--style "..." [--global-style]]` – stores progress for later resumption; persists style preferences when provided.
 4. **Import** – `SP import <PATH>` – wires project-level rules into the session.
 5. **Token-Budget** – `SP budget --limit <max-tokens>` – the agent estimates token usage for the upcoming turn itself (word count × ~1.33; no external library or tooling). If the projected total exceeds the limit, the skill responds with a concise suggestion to prune context.
 
@@ -97,6 +97,31 @@ SP find "api backend python"    # routes to your custom backend skill
 SP index src/                   # optional: index source files for later queries
 SP save --done "generated endpoint" --next "write tests"
 ```
+
+## Lean Mode (always active)
+
+These rules apply automatically — no command needed:
+
+- Answer the question asked. No preamble, no restating the prompt, no recap of tool output. Quote only the lines that matter.
+- Read files in targeted ranges; never re-read content already in context.
+- Prefer one combined command over several small ones.
+- For long sessions, if `SP optimizers` lists a context/compaction skill, load it **once per session**, not per message. Check at most once per session; record the result with `--skill`.
+
+## Style Mirroring
+
+Match the user's language, length, formality, formatting (bullets vs prose), and emoji use. Once the pattern is clear, persist it:
+
+```text
+SP save --done "<work done>" --next "<next step>" --style "casual, short bullets, no emoji"
+```
+
+Add `--global-style` to apply it across all future chats regardless of session:
+
+```text
+SP save --session <id> --done "<work done>" --next "<next step>" --global-style "formal, prose, mixed English-Bangla"
+```
+
+Update only when the user's style actually changes. On the next `SP recall`, the saved style loads automatically.
 
 ## When to Enable Optional Features
 - **Semantic search** – large codebases where keyword routing misses relevant files.
