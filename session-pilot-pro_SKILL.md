@@ -3,7 +3,7 @@ name: session-pilot-pro-plus
 description: Professional, token-aware session memory & skill router. Adds agent-side token budgeting, experience learning, rate-limit model fallback, optional micro-skills, tool-prune, loop-guard, and lightweight search/persistence helpers. Prompt-only; no external dependencies.
 license: MIT
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # Session Pilot Pro Plus
@@ -13,11 +13,18 @@ A lightweight core (< 200 tokens) that **recalls**, **routes**, **checkpoints**,
 All `SP` commands are **chat conventions**: the user types them in conversation and the agent performs the described behavior. They are not shell commands, and this skill ships no executable code.
 
 ## Core Commands (always loaded)
-1. **Recall** – `SP recall [--session ID]` – restores prior chat state (including learned facts) or starts a fresh session.
+1. **Recall** – `SP recall [--session ID]` – restores prior chat state (including learned facts, style, and checkpoints) or starts a fresh session.
+   - `SP recall --list` – show available sessions (most recent first).
+   - `SP recall --create "<id>"` – explicitly create a new session.
+   - `SP recall --delete "<id>"` – remove an old session.
 2. **Route** – `SP find "<keywords>"` – selects the best installed skill. Returns `match: strong|weak|none`.
-3. **Checkpoint** – `SP save --done "<action>" --next "<step>" [--style "..." [--global-style]]` – stores progress for later resumption; persists style preferences when provided.
+   - `SP list` – show all discoverable skills/agents/plugins with one-line descriptions.
+3. **Checkpoint** – `SP save --done "<action>" --next "<step>" [--style "..." [--global-style]] [--skill <name>]` – stores progress for later resumption; persists style preferences when provided.
 4. **Import** – `SP import <PATH>` – wires project-level rules into the session.
 5. **Token-Budget** – `SP budget --limit <max-tokens>` – the agent estimates token usage for the upcoming turn itself (word count × ~1.33; no external library or tooling). If the projected total exceeds the limit, the skill responds with a concise suggestion to prune context.
+6. **Clean** – `SP clean` – drops low-value context (repeated self-replies, tool call echoes, old preamble) from the current turn's history before the next model call.
+7. **Mark-Done** – `SP mark-done` – signals the task is complete; the agent should stop generating further work for this prompt. On next recall, the session loads with `status: done`.
+8. **List Optimizers** – `SP optimizers` – list installed context/compaction skills (e.g., `strategic-compact`, `caveman`) that can be loaded once per session via `SP save --skill <name>`.
 
 ## Optional Sub-Skills (on-demand, **not** part of the core prompt)
 
@@ -107,6 +114,13 @@ These rules apply automatically — no command needed:
 - Prefer one combined command over several small ones.
 - For long sessions, if `SP optimizers` lists a context/compaction skill, load it **once per session**, not per message. Check at most once per session; record the result with `--skill`.
 
+## Guardrails (always active)
+
+- **Secrets & PII**: Never emit API keys, tokens, passwords, connection strings, or personally identifiable information. Redact automatically.
+- **Scope discipline**: Do only what the user asked. Refuse scope creep. If a request expands, ask before acting.
+- **No external calls without consent**: Never install packages, send data off-machine, or make network requests without explicit user approval.
+- **Error transparency**: If a command fails (session not found, skill not installed, model limit hit), report the exact error and the next actionable step — never silently continue with wrong assumptions.
+
 ## Style Mirroring
 
 Match the user's language, length, formality, formatting (bullets vs prose), and emoji use. Once the pattern is clear, persist it:
@@ -122,6 +136,34 @@ SP save --session <id> --done "<work done>" --next "<next step>" --global-style 
 ```
 
 Update only when the user's style actually changes. On the next `SP recall`, the saved style loads automatically.
+
+## Session Behavior
+
+- **Fresh start**: `SP recall --create "my-project"` creates a clean session with no prior context.
+- **Auto-create**: If `--session` is provided but doesn't exist, create it silently and proceed.
+- **Fallback**: If no `--session` flag is given, use a project-scoped slug: `auto-<hash of cwd>`.
+- **Completion marker**: When `SP mark-done` is used, the session stores `status: done`. On next `SP recall`, the agent sees this and knows the prior task finished.
+- **Environment override**: `SESSION_PILOT_ID` in the environment forces a session ID when `--session` is omitted.
+
+## Discovery Protocol (for agents that can scan the filesystem)
+
+If the host agent has file access, it SHOULD scan these roots at startup and build an in-memory capability index:
+
+```
+~/.config/opencode/skills
+~/.config/opencode/agent
+~/.claude/skills
+~/.claude/agents
+~/.gemini/skills
+~/.gemini/config/skills
+~/.codex/skills
+~/.cursor/skills
+./.agents/skills
+./.claude/skills
+./.github/skills
+```
+
+`SP list` reads from this index. `SP find "<keywords>"` ranks entries by keyword overlap with `name` and `description` frontmatter fields. `SP optimizers` filters the index for skills whose description contains: `token`, `compress`, `compact`, `context budget`, `prompt optim`, `caveman`, `rtk`, `summariz`.
 
 ## When to Enable Optional Features
 - **Semantic search** – large codebases where keyword routing misses relevant files.

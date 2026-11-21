@@ -8,13 +8,18 @@ Session Pilot Pro Plus delivers every core mechanism TokenEconomizer offers — 
 
 `session-pilot-pro-plus` is a **prompt-only skill**: one Markdown file that instructs an AI coding agent to recall session state, route requests to the best available skill, checkpoint progress, and keep token usage under control. There is no runtime code, CLI binary, or external dependency.
 
-- Per-chat memory recall & checkpointing.
-- Smart routing to the best installed skill/agent.
+- Per-chat memory recall & checkpointing with session lifecycle (create, list, delete).
+- Smart routing to the best installed skill/agent with `SP list` discovery.
 - Pre-turn token-budget checks to avoid cost overruns.
 - Opt-in helpers that prune unused tool calls and break repetitive loops.
 - Experience learning: durable facts and lessons distilled from failures and fixes.
 - Automatic model fallback when a rate limit or usage limit is hit.
 - Optional semantic search, persistent key/value store, and cross-agent memory sync.
+- **Lean mode** — automatic verbosity reduction on every turn.
+- **Style mirroring** — adapts to your communication patterns and persists them.
+- **Guardrails** — secrets/PII redaction, scope discipline, consent gates, error transparency.
+- **Session lifecycle** — fresh start, auto-create, completion markers, env override.
+- **Discovery protocol** — scans standard skill directories for installed capabilities.
 
 ## How it compares to TokenEconomizer
 
@@ -31,14 +36,19 @@ Session Pilot Pro Plus covers the same three mechanisms and adds six more capabi
 | **Loop guard** | LLM judge detects stuck turns (confidence ≥ 0.7, up to 1 redirect) | `SP loop-guard` — the main agent detects repetition patterns directly; no judge round-trip |
 | **Experience learning** | Facts learned from failures/model reviews every *k* = 3 sessions | `SP learn` — lessons distilled inline at checkpoints, persisted, and auto-loaded on `SP recall`; no review model call |
 | **Rate-limit model fallback** | — | `SP fallback --chain "<models>"` — switches to the next model and retries when a rate/usage limit hits |
-| **Session recall / resume** | — | `SP recall [--session ID]` |
-| **Checkpointing** | — | `SP save --done … --next …` |
-| **Skill routing** | — | `SP find "<keywords>"` with `match: strong\|weak\|none` |
+| **Session recall / resume** | — | `SP recall [--session ID]` with `--list`, `--create`, `--delete` |
+| **Checkpointing** | — | `SP save --done … --next …` with `--style`, `--global-style`, `--skill` |
+| **Skill routing** | — | `SP find "<keywords>"` with `match: strong\|weak\|none` + `SP list` |
 | **Pre-turn token budget** | — (savings measured after the fact) | `SP budget --limit N` estimates cost *before* the turn runs |
 | **Semantic search** | — | `SP index <PATH>` / `SP query "<text>"` |
 | **Persistent store** | Plugin state in `~/.tokeneconomizer` | `SP persist set\|get` — small per-project JSON values |
 | **Cross-agent memory** | Each agent learns on its own | `SP memory sync` — shared durable context |
 | **Secondary model calls** | Implicit (judge/review calls always possible) | `SP call-model <model>` — explicit, **disabled by default** |
+| **Context cleaning** | — | `SP clean` — drops low-value history before next turn |
+| **Task completion signal** | — | `SP mark-done` — stops generation, marks session `done` |
+| **Lean mode** | — | Built-in: no preamble, targeted reads, combined commands |
+| **Style mirroring** | — | Auto-detect + persist with `--style` / `--global-style` |
+| **Guardrails** | — | Secrets/PII, scope discipline, consent, error transparency |
 
 ### Why it is faster and lighter (by design)
 
@@ -57,7 +67,7 @@ No dependencies, nothing to build, no marketplace commands.
 1. Copy `session-pilot-pro_SKILL.md` into your agent's skills directory (rename to `SKILL.md` inside a `session-pilot-pro-plus` folder if your harness expects that layout), **or**
 2. Paste its contents into your agent's persistent instructions.
 
-Works with any harness that reads Markdown skills or custom instructions — Qoder, Claude Code, Codex CLI, and similar agents. No per-agent plugin variants, no Python version requirements.
+Works with any harness that reads Markdown skills or custom instructions — OpenCode, Qoder, Claude Code, Codex CLI, Cursor, Gemini CLI, Antigravity, and similar agents. No per-agent plugin variants, no Python version requirements.
 
 ## Quick start
 
@@ -77,10 +87,17 @@ All commands are **chat conventions**: type them in the conversation and the age
 | Command | Behavior |
 |---|---|
 | `SP recall [--session ID]` | Restore prior chat state or start a fresh session |
+| `SP recall --list` | Show available sessions (most recent first) |
+| `SP recall --create "<id>"` | Explicitly create a new session |
+| `SP recall --delete "<id>"` | Remove an old session |
 | `SP find "<keywords>"` | Select the best installed skill; returns `match: strong\|weak\|none` |
-| `SP save --done "<action>" --next "<step>"` | Checkpoint progress for later resumption |
+| `SP list` | Show all discoverable skills/agents/plugins with one-line descriptions |
+| `SP save --done "<action>" --next "<step>" [--style "..."] [--global-style] [--skill <name>]` | Checkpoint progress for later resumption; persists style preferences when provided |
 | `SP import <PATH>` | Wire project-level rules into the session |
 | `SP budget --limit <max>` | Estimate the upcoming turn's tokens; suggest pruning if over limit |
+| `SP clean` | Drop low-value context (repeated self-replies, tool call echoes, old preamble) from the current turn's history |
+| `SP mark-done` | Signal the task is complete; agent stops generating further work; session loads with `status: done` on next recall |
+| `SP optimizers` | List installed context/compaction skills (e.g., `strategic-compact`, `caveman`) |
 
 ### Opt-in helpers (loaded only when invoked)
 
