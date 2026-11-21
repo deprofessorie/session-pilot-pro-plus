@@ -235,6 +235,29 @@ TokenEconomizer publishes measured results (18.4–30.9% lower mean cost on SWE-
 | [`STORAGE_ADAPTERS.md`](STORAGE_ADAPTERS.md) | Interface & reference implementations for real persistence (JSON, SQLite, UPSTASH, IndexedDB) |
 | [`EVALUATION.md`](EVALUATION.md) | 25 test prompts to verify every capability works |
 | [`COMPATIBILITY.md`](COMPATIBILITY.md) | Agent support matrix — which commands work on OpenCode, Claude Code, Codex, Cursor, web agents, etc. |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to add adapters, features, or docs the right way |
+
+## Verification & CI
+
+Run the full suite locally before submitting anything:
+
+```bash
+python scripts/verify.py --adapter json_file
+python scripts/verify.py --adapter sqlite
+python scripts/repl.py                  # interactive smoke-test
+docker build -t sp-test . && docker run --rm sp-test python scripts/verify.py
+```
+
+GitHub Actions runs automatically on every push/PR: verifies both adapters, builds the Docker image, and validates documentation.
+
+## Demo REPL
+
+A standalone interactive shell for testing every command without an LLM harness:
+
+```bash
+python scripts/repl.py --adapter json_file --home /tmp/sp-demo
+# Then type: SP recall --create demo  →  SP save --done x --next y  →  SP list  →  SP exit
+```
 
 ## License
 
