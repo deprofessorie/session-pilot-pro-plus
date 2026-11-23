@@ -4,7 +4,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.8+](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
-[![Tests: 31/31 Passed](https://img.shields.io/badge/Tests-31%2F31%20Passed-brightgreen.svg)](scripts/verify.py)
+[![Tests: 34/34 Passed](https://img.shields.io/badge/Tests-34%2F34%20Passed-brightgreen.svg)](scripts/verify.py)
 [![Reliability Audit: 30/30](https://img.shields.io/badge/Stress%20Audit-30%2F30%20Passed-brightgreen.svg)](tests/stress_audit.py)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0%20(Pure%20Stdlib)-orange.svg)](adapters/)
 [![Release: v3.0.0](https://img.shields.io/badge/Release-v3.0.0%20(Honest%20Rebuild)-purple.svg)](https://github.com/deprofessorie/session-pilot-pro-plus)
@@ -46,8 +46,8 @@ To maintain absolute transparency, capabilities in Session Pilot Pro Plus are cl
 Rather than claiming to replace peer tools with synthetic metrics, Session Pilot Pro Plus defines its clear architectural niche alongside them:
 
 - **[TokenEconomizer](https://github.com/microsoft/TokenEconomizer)**: Excellent for automated log mining and harness-level schema deny-lists (measured 18.4–30.9% input reduction on 277 SWE-bench tasks). Requires Python 3.10+, harness hooks, and auxiliary LLM proposer calls.
-- **[Ponytail](https://github.com/obra/ponytail)**: Excellent for multi-harness rules configuration enforcing minimal diffs and YAGNI (measured -26% cost, -45% output tokens across 39 tasks).
-- **[Caveman](https://github.com/JuliusBrantner/caveman)**: Measured 33.2% input token reduction and 21% cheaper per solved task on Terminal-Bench 4 by stripping filler words.
+- **[Ponytail](https://github.com/DietrichGebert/ponytail)**: Excellent for multi-harness rules configuration enforcing minimal diffs and YAGNI (measured -26% cost, -45% output tokens across 39 tasks).
+- **[Caveman](https://github.com/JuliusBrussee/caveman)**: Measured 33.2% input token reduction and 21% cheaper per solved task on Terminal-Bench 4 by stripping filler words.
 - **Session Pilot Pro Plus**: Fills the gap for **zero-dependency offline persistence, instant session recall across sessions, zero-billing fact harvesting, and portable single-file skill deployment across both CLI and web-based agents.**
 
 ---
@@ -106,7 +106,10 @@ python scripts/verify.py --adapter sqlite
 python tests/stress_audit.py --adapter json_file
 python tests/stress_audit.py --adapter sqlite
 
-# 3. Interactive REPL for local testing
+# 3. Storage latency & throughput empirical benchmark
+python scripts/bench_storage.py --iterations 100
+
+# 4. Interactive REPL for local testing
 python scripts/repl.py --adapter json_file
 ```
 

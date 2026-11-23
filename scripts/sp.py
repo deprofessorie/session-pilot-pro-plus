@@ -516,6 +516,23 @@ def cmd_memory(args):
         print("    Valid: write, read, list, sync")
 
 
+def cmd_harvest(args):
+    """Auto-harvest repo facts from command execution."""
+    hooks_dir = ROOT_DIR / "hooks"
+    sys.path.insert(0, str(hooks_dir))
+    try:
+        import post_tool_use
+        res = post_tool_use.harvest_command(args.command_line, project=args.project, store_override=store)
+        if res:
+            print(f"[fact harvest] Extracted {len(res)} fact(s):")
+            for k, v in res.items():
+                print(f"  - {k} = {repr(v)}")
+        else:
+            print("[fact harvest] No known pattern matched (checked: test, build, linter, pkg_manager)")
+    except Exception as e:
+        print(f"[!] Error in harvest: {e}")
+
+
 def cmd_sessions(args):
     """List or delete sessions."""
     if not store:
@@ -614,6 +631,11 @@ def main():
     p_sess.add_argument("action", choices=["list", "delete"])
     p_sess.add_argument("target", nargs="?", default=None)
 
+    # harvest
+    p_harvest = subparsers.add_parser("harvest", help="Auto-harvest repo facts from command execution")
+    p_harvest.add_argument("command_line", help="Terminal command string")
+    p_harvest.add_argument("--project", default="default")
+
     # version
     subparsers.add_parser("version", help="Print version")
 
@@ -631,6 +653,7 @@ def main():
         "compact": cmd_compact,
         "memory": cmd_memory,
         "sessions": cmd_sessions,
+        "harvest": cmd_harvest,
     }
 
     if args.command == "version":

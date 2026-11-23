@@ -2,8 +2,11 @@
 """
 Session Pilot Pro Plus — Hook Installer
 ========================================
-Registers lifecycle hooks for Claude Code, OpenCode, and shell integrations.
-Generates harness configuration files so session persistence is natively enforced (●).
+Registers lifecycle hooks for Claude Code and local harnesses.
+Complies strictly with Claude Code hooks JSON schema:
+  - Hooks dictionary containing event arrays
+  - Matcher objects with nested hook command definitions
+  - Events: SessionStart, Stop, and PostToolUse (matcher: Bash)
 """
 
 import json
@@ -31,26 +34,48 @@ def install_claude_code():
     hooks = settings.setdefault("hooks", {})
     python_exe = sys.executable
 
-    hooks["SessionStart"] = f'"{python_exe}" "{HOOKS_DIR / "session_start.py"}"'
-    hooks["SessionStop"] = f'"{python_exe}" "{HOOKS_DIR / "session_stop.py"}"'
+    # SessionStart event
+    hooks["SessionStart"] = [
+        {
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": f'"{python_exe}" "{HOOKS_DIR / "session_start.py"}"'
+                }
+            ]
+        }
+    ]
+
+    # Stop event (Claude Code session termination)
+    hooks["Stop"] = [
+        {
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": f'"{python_exe}" "{HOOKS_DIR / "session_stop.py"}"'
+                }
+            ]
+        }
+    ]
+
+    # PostToolUse event (harvests facts from Bash executions)
+    hooks["PostToolUse"] = [
+        {
+            "matcher": "Bash",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": f'"{python_exe}" "{HOOKS_DIR / "post_tool_use.py"}"'
+                }
+            ]
+        }
+    ]
 
     settings_file.write_text(json.dumps(settings, indent=2), encoding="utf-8")
     print(f"✓ Claude Code hooks configured in {settings_file}")
-
-
-def install_opencode():
-    opencode_dir = Path.home() / ".config" / "opencode"
-    if not opencode_dir.exists():
-        opencode_dir.mkdir(parents=True, exist_ok=True)
-
-    hooks_file = opencode_dir / "hooks.json"
-    python_exe = sys.executable
-    config = {
-        "on_session_start": f'"{python_exe}" "{HOOKS_DIR / "session_start.py"}"',
-        "on_session_stop": f'"{python_exe}" "{HOOKS_DIR / "session_stop.py"}"',
-    }
-    hooks_file.write_text(json.dumps(config, indent=2), encoding="utf-8")
-    print(f"✓ OpenCode hooks configured in {hooks_file}")
+    print("  - SessionStart: auto-recalls prior state")
+    print("  - Stop: safe, non-destructive flush")
+    print("  - PostToolUse (Bash): auto-harvests test/build command facts")
 
 
 def main():
@@ -58,12 +83,7 @@ def main():
     try:
         install_claude_code()
     except Exception as e:
-        print(f" Claude Code setup: {e}")
-
-    try:
-        install_opencode()
-    except Exception as e:
-        print(f" OpenCode setup: {e}")
+        print(f"✗ Claude Code setup: {e}")
 
     print("\nHooks installation complete.")
 

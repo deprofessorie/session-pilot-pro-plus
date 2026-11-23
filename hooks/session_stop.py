@@ -1,39 +1,54 @@
 #!/usr/bin/env python3
 """
-Session Pilot Pro Plus — Session Stop Lifecycle Hook
-=====================================================
-Executes automatically when an agent session terminates.
-Ensures the final state is checkpointed to disk.
+Session Pilot Pro Plus — Non-Destructive Session Stop Hook
+===========================================================
+Executes when an agent session ends (Stop event in Claude Code).
+CRITICAL: Non-destructive design.
+Does NOT overwrite existing checkpoints or done/next actions.
+Safely flushes and preserves existing task state.
 """
 
 import os
-import subprocess
 import sys
+import time
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = SCRIPT_DIR.parent
-SP_PY = ROOT_DIR / "scripts" / "sp.py"
+ADAPTERS_DIR = ROOT_DIR / "adapters"
+sys.path.insert(0, str(ADAPTERS_DIR))
+
+try:
+    import json_file
+    store = json_file.get_store()
+except Exception:
+    store = None
 
 
 def main():
-    session_id = os.environ.get("SESSION_PILOT_ID")
-    cmd = [
-        sys.executable, str(SP_PY), "save",
-        "--done", "Session concluded cleanly via lifecycle hook",
-        "--next", "Resume on next session start"
-    ]
-    if session_id:
-        cmd.extend(["--session", session_id])
-
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
-        if proc.stdout:
-            sys.stdout.write(proc.stdout)
-        sys.exit(proc.returncode)
-    except Exception as e:
-        sys.stderr.write(f"[SP Hook Error] Failed to run session_stop: {e}\n")
+    if not store:
         sys.exit(0)
+
+    # Resolve session id safely
+    sys.path.insert(0, str(ROOT_DIR / "scripts"))
+    try:
+        from sp import get_current_session_id
+        session_id = get_current_session_id()
+    except Exception:
+        session_id = os.environ.get("SESSION_PILOT_ID")
+
+    if not session_id:
+        sys.exit(0)
+
+    state = store.load(session_id)
+    if not state:
+        # No existing state: do not manufacture false checkpoints
+        sys.exit(0)
+
+    # Touch updated_at timestamp without modifying or appending to checkpoints
+    checkpoints = state.get("checkpoints", [])
+    store.save(session_id, checkpoints=checkpoints)
+    sys.exit(0)
 
 
 if __name__ == "__main__":

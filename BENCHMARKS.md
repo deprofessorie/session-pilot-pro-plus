@@ -8,12 +8,14 @@
 
 ## 1. Empirical Storage Engine Benchmarks
 
-Direct measurements across 100 rapid checkpoint saves, loads, and fact operations on Windows NTFS / POSIX:
+Direct measurements across 100 rapid checkpoint saves, loads, and fact operations on Windows NTFS / POSIX (reproduce locally via `python scripts/bench_storage.py`):
 
 | Storage Adapter | Checkpoint Save Latency | Checkpoint Load Latency | Fact Write Latency | Save Throughput | Disk Usage (100 ops) | Zero Dependencies |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`json_file`** | 11.26 ms/op | 0.2 ms/op | 1.07 ms/op | **88.8 ops/sec** | ~12.7 KB | Yes (Stdlib) |
+| **`json_file`** | 11.26 ms/op | 0.20 ms/op | 1.07 ms/op | **88.8 ops/sec** | ~12.7 KB | Yes (Stdlib) |
 | **`sqlite`** | 12.14 ms/op | 1.54 ms/op | 9.31 ms/op | **82.3 ops/sec** | ~60.0 KB | Yes (Stdlib) |
+
+*Run reproduction script:* `python scripts/bench_storage.py --iterations 100`
 
 ### Stress Audit & Concurrency Verification
 - **Test Suite:** `tests/stress_audit.py` (30 scenarios across concurrent threads, 0-byte recovery, malformed JSON, and path traversal).
@@ -52,13 +54,13 @@ Rather than inventing synthetic comparison figures, Session Pilot Pro Plus direc
 - **Mechanism:** Settings-level tool pruning (removing schemas before serialization) + background proposer LLM proposing micro-skills over $k=3$ sessions.
 - **Cost Tradeoff:** Requires secondary model billing for judges and micro-skill verification.
 
-### 2. Ponytail (Jesse Vincent / obra)
+### 2. Ponytail (Dietrich Gebert / [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail))
 - **Benchmark Dataset:** 39 real-world tasks across 12 agent harnesses.
 - **Measured Impact:** **-26% total API cost, -45% output tokens**.
 - **Mechanism:** Lazy senior developer prompt discipline enforcing minimal working diffs, YAGNI, and closing transparency notes.
 - **Cost Tradeoff:** Zero secondary model billing; relies on prompt adherence and per-harness rule injection.
 
-### 3. Caveman Dialect (Tomek Czajka & Community)
+### 3. Caveman Dialect (Julius Brussee / [JuliusBrussee/caveman](https://github.com/JuliusBrussee/caveman))
 - **Benchmark Dataset:** Terminal-Bench 4 (TB4).
 - **Measured Impact:** **33.2% fewer input tokens, 21% cheaper per solved task** with zero loss in task completion accuracy.
 - **Mechanism:** Stripping conversational filler words for ultra-dense technical communication.

@@ -234,16 +234,20 @@ def test_compaction(store, R: Results):
 
 
 def test_post_turn_harvest(store, R: Results):
-    """Test auto-harvesting facts from commands."""
+    """Test auto-harvesting facts from commands (post_tool_use hook)."""
     sys.path.insert(0, str(SCRIPT_DIR / "hooks"))
-    import post_turn
+    import post_tool_use
     proj = f"verify-harvest-{int(time.time())}"
-    post_turn.harvest_command_facts("pnpm run build", project=proj, store_override=store)
-    post_turn.harvest_command_facts("pytest tests/ -v", project=proj, store_override=store)
+    res1 = post_tool_use.harvest_command("pnpm run build", project=proj, store_override=store)
+    res2 = post_tool_use.harvest_command("pytest tests/ -v -q", project=proj, store_override=store)
+
+    R.check("post_tool_use returned build fact", "build_cmd" in res1 and "pnpm" in res1["build_cmd"], f"res={res1}")
+    R.check("post_tool_use returned test fact", "test_cmd" in res2 and "pytest" in res2["test_cmd"], f"res={res2}")
 
     facts = store.fact_list(proj)
-    R.check("harvested build command", "build_cmd" in facts and "pnpm" in facts["build_cmd"], f"facts={facts}")
-    R.check("harvested test command", "test_cmd" in facts and "pytest" in facts["test_cmd"], f"facts={facts}")
+    R.check("harvested build command in store", "build_cmd" in facts and "pnpm" in facts["build_cmd"], f"facts={facts}")
+    R.check("harvested test command in store", "test_cmd" in facts and "pytest" in facts["test_cmd"], f"facts={facts}")
+    R.check("harvested package manager in store", "pkg_manager" in facts and facts["pkg_manager"] == "pnpm", f"facts={facts}")
     for k in list(facts.keys()):
         store.fact_delete(proj, k)
 
