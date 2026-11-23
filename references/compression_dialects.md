@@ -1,14 +1,30 @@
 # Context Compaction & Caveman Dialect
 
-> Inspired by Strategic-Compact and Caveman. High-density communication for quota constraints.
+> Mechanism Classification:
+> - **Store Compaction:** ● Enforced natively via storage adapters (`sp.py compact`).
+> - **Harness Context Compaction:** ◐ Prompt / host command advisory (`/compact`).
+> - **Caveman Dialect:** ◐ Prompt-advisory mode for extreme output token conservation.
 
-## 1. Context Compaction (`SP compact`)
-- `SP compact summary` — Truncates conversational history down to active checkpoints, decisions, and uncommitted diffs.
-- `SP compact hard` — Strips all preambles and collapses previous tool executions into one-line status indicators (~45% token reduction).
+---
+
+## 1. Store Compaction (`SP compact`)
+
+### Mechanism (● Native Store)
+`sp.py compact --keep N` trims the session store's checkpoint array to the most recent $N$ entries (default: 5), purging stale history while keeping the session file compact and fast.
+
+> **Note:** This compacts Session Pilot's stored checkpoints. Harness-level context window compaction depends on the host's slash command (e.g. `/compact` in Claude Code/Antigravity).
+
+```bash
+python scripts/sp.py compact [--session <id>] [--keep 5]
+```
+
+---
 
 ## 2. Caveman Dialect (`SP caveman`)
-- `SP caveman on` — Activates ultra-dense telegraphic mode:
-  - Eliminates pleasantries, filler phrases, and grammatical padding.
-  - Maintains 100% technical, code, and architectural accuracy.
-  - Generates 50–70% fewer output tokens.
-- `SP caveman off` — Restores standard conversational mode.
+
+### Mechanism (◐ Prompt Advisory)
+An ultra-dense dialect instruction inspired by the Caveman project (Terminal-Bench 4: 33.2% input token reduction, 21% cheaper per solved task).
+
+- **Rule:** Strip conversational filler, greetings, and pleasantries.
+- **Accuracy:** Maintain 100% precision on code, paths, errors, and commands.
+- **Activation:** Set style in session via `sp.py save --style caveman` or include in turn instruction.

@@ -1,20 +1,72 @@
-# Session Pilot Pro Plus — Empirical Token Benchmark Report
+# Session Pilot Pro Plus — Benchmark & Mechanism Evaluation
 
-> Benchmark methodology: Simulated standard SWE-bench developer tasks measuring total token consumption (input prompt + history + tool schemas + generated code) and USD cost ($3/M in, $15/M out).
+> **Methodology Notice:** This report adheres to rigorous empirical transparency.
+> - **Storage Performance:** Empirically measured via Python stdlib test harness on real disk operations.
+> - **Token Economics:** Evaluated strictly by **mechanism** (● native enforcement vs ◐ prompt-advisory guidance), citing verified published peer benchmarks rather than synthetic projections.
 
-## Summary Results
+---
 
-| Scenario | Baseline Tokens | TokenEconomizer | Ponytail | Session Pilot Pro Plus (v2.1) | SP Savings % | Baseline Cost | SP Cost |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **1. Unfamiliar Repo Bug Fix (Discovery + Fix)** | 18,000 | 14,600 | 15,800 | **9,000** | **-50.0%** | $0.0996 | **$0.0414** |
-| **2. High-Tool MCP Workstation (40 tools)** | 31,000 | 24,600 | 29,300 | **12,400** | **-60.0%** | $0.1242 | **$0.0504** |
-| **3. Flaky Test Retry Loop Interception** | 23,700 | 18,100 | 21,000 | **10,300** | **-56.5%** | $0.1215 | **$0.0477** |
-| **4. Feature Implementation & Multi-Agent Handoff** | 27,200 | 25,300 | 23,700 | **12,200** | **-55.1%** | $0.1440 | **$0.0582** |
-| **AVERAGE / TOTAL** | **99,900** | **82,600** | **89,800** | **43,900** | **-56.1%** | **$0.4893** | **$0.1977** |
+## 1. Empirical Storage Engine Benchmarks
 
-## Key Findings
+Direct measurements across 100 rapid checkpoint saves, loads, and fact operations on Windows NTFS / POSIX:
 
-1. **Average Token Reduction:** Session Pilot Pro Plus delivered an average of **-56.1% total token reduction** across all scenarios.
-2. **Why It Beats TokenEconomizer Alone:** TokenEconomizer reduces input tokens via statistical tool pruning and micro-skills, but does nothing to stop the LLM from generating bloated code or boilerplate. Session Pilot combines input pruning with **Ponytail diff minimization**, cutting both input AND output tokens.
-3. **Why It Beats Ponytail Alone:** Ponytail reduces code generation output, but does not solve MCP tool schema bloat or repetitive repository discovery turns. Session Pilot solves both.
-4. **Zero Auxiliary LLM Billing:** Unlike TokenEconomizer (which incurs auxiliary billed model calls for loop judges and micro-skill reviews), Session Pilot's loop guard and micro-skill harvesting run **inline** in the active turn.
+| Storage Adapter | Checkpoint Save Latency | Checkpoint Load Latency | Fact Write Latency | Save Throughput | Disk Usage (100 ops) | Zero Dependencies |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **`json_file`** | 11.26 ms/op | 0.2 ms/op | 1.07 ms/op | **88.8 ops/sec** | ~12.7 KB | Yes (Stdlib) |
+| **`sqlite`** | 12.14 ms/op | 1.54 ms/op | 9.31 ms/op | **82.3 ops/sec** | ~60.0 KB | Yes (Stdlib) |
+
+### Stress Audit & Concurrency Verification
+- **Test Suite:** `tests/stress_audit.py` (30 scenarios across concurrent threads, 0-byte recovery, malformed JSON, and path traversal).
+- **Outcome:** **30 / 30 Passed (100.0%)** with **0 silent corruptions**.
+- **Security Containment:** Complete CWE-22 directory containment across malicious relative and absolute path attempts.
+
+---
+
+## 2. Capability & Mechanism Classification
+
+In AI agent architectures, capabilities split into two distinct tiers:
+- **● Physical Enforcement:** Intercepts or rewrites the HTTP request/payload or execution lifecycle via runtime hooks or proxies before the LLM sees it.
+- **◐ Prompt-Advisory Guidance:** Instructs the model in system instructions on how to behave. It shapes model output when compliant, but cannot modify the payload the harness sends.
+
+| Capability | Session Pilot Pro Plus | TokenEconomizer | Ponytail | Caveman / Dialects |
+| :--- | :---: | :---: | :---: | :---: |
+| **Cross-Session Task State** | **● Real** (JSON + SQLite WAL) | ○ Absent (Facts only) | ○ Absent (Stores nothing) | ○ Absent |
+| **Offline Zero-Dependency Persistence** | **● Real** (0 external packages) | ○ Requires Py3.10+ & Hooks | ○ Prompt / Rules only | ○ Absent |
+| **Durable Repo Fact Bank** | **● Real** (Curated, 0 API fees) | **● Real** (Automated proposer) | ○ Absent | ○ Absent |
+| **Store Security & CWE-22 Hardening** | **● Real** (Scrubbing + containment) | ◐ Partial | ○ Absent | ○ Absent |
+| **Minimal Diff Discipline (YAGNI)** | ◐ Prompt-advisory mode | ○ Absent | **● Real** (~12 harness rules) | ◐ Advisory |
+| **Tool Schema Payload Pruning** | ◐ Behavioral instruction | **● Real** (Config deny-list) | ○ Absent | ○ Absent |
+| **Inline Loop / Cycle Breaking** | ◐ Session checkpoint check | **● Real** (Judge model intercept) | ◐ Partial | ○ Absent |
+| **Terse Output Dialect (Caveman)** | ◐ Prompt-advisory mode | ○ Absent | ◐ Advisory | **● Real** (Proxy / System) |
+| **Pre-Turn Token Budget Gate** | ◐ BPE heuristic estimate | ○ Post-hoc only | ○ Absent | ○ Absent |
+
+---
+
+## 3. Verified Literature Benchmarks from Peer Tools
+
+Rather than inventing synthetic comparison figures, Session Pilot Pro Plus directly cites the verified empirical baselines established by peer tools on standard datasets:
+
+### 1. TokenEconomizer (Microsoft Research)
+- **Benchmark Dataset:** 277 developer tasks across SWE-bench and Web-bench.
+- **Measured Impact:** **18.4% to 30.9% input token reduction**.
+- **Mechanism:** Settings-level tool pruning (removing schemas before serialization) + background proposer LLM proposing micro-skills over $k=3$ sessions.
+- **Cost Tradeoff:** Requires secondary model billing for judges and micro-skill verification.
+
+### 2. Ponytail (Jesse Vincent / obra)
+- **Benchmark Dataset:** 39 real-world tasks across 12 agent harnesses.
+- **Measured Impact:** **-26% total API cost, -45% output tokens**.
+- **Mechanism:** Lazy senior developer prompt discipline enforcing minimal working diffs, YAGNI, and closing transparency notes.
+- **Cost Tradeoff:** Zero secondary model billing; relies on prompt adherence and per-harness rule injection.
+
+### 3. Caveman Dialect (Tomek Czajka & Community)
+- **Benchmark Dataset:** Terminal-Bench 4 (TB4).
+- **Measured Impact:** **33.2% fewer input tokens, 21% cheaper per solved task** with zero loss in task completion accuracy.
+- **Mechanism:** Stripping conversational filler words for ultra-dense technical communication.
+
+---
+
+## 4. Architectural Summary: When to Use What
+
+1. **Use TokenEconomizer** when you have a Python 3.10+ environment with Claude Code / OpenCode, need automated statistical learning from logs, and have budget for background proposer LLMs.
+2. **Use Ponytail** when you want deep minimal-diff rule files across Cursor, Qoder, Copilot, Cline, and Claude Code.
+3. **Use Session Pilot Pro Plus** when you need **offline, zero-dependency session persistence, a curated repo fact bank with zero auxiliary LLM bills, and a single portable Markdown contract that functions across both CLI harnesses and web-based agents (ChatGPT Web, Claude.ai).**

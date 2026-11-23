@@ -1,27 +1,31 @@
 # Tool Pruning & Loop Guard
 
-> Inspired by TokenEconomizer cost-control mechanisms. Operates inline without auxiliary LLM judge calls.
-
-## 1. Tool Schema Pruning (`SP prune-tools`)
-
-### Problem
-Large MCP setups inject dozens of tool definitions (often 100–300 tokens per tool schema) into every turn's system payload, wasting 2,000–5,000 tokens on tools irrelevant to the active task.
-
-### Commands
-- `SP prune-tools show` — List available tools and mark active vs inactive candidates.
-- `SP prune-tools apply` — Suppress schemas of unused tools for the current session phase.
-- `SP prune-tools auto` — Dynamically drop tool definitions not called in the last 3 turns.
-- `SP prune-tools restore` — Restore visibility of all available tools.
+> Mechanism Classification:
+> - **Loop Guard:** ● Enforced natively via checkpoint hash comparison (`sp.py loop-guard`).
+> - **Tool Pruning:** ◐ Advisory / architectural note. True schema suppression requires harness-level proxy/hook integration.
 
 ---
 
-## 2. Loop Guard & Circuit Breaker (`SP loop-guard`)
+## 1. Loop Guard & Cycle Breaker (`SP loop-guard`)
 
-### Problem
-Agents frequently get trapped in retry cycles (e.g. running the same failing test 4 times with slight syntactic variations). TokenEconomizer uses an auxiliary LLM judge call; Session Pilot detects cycles **inline**.
+### Mechanism (● Native)
+`sp.py loop-guard` inspects recent session checkpoints in the storage adapter. It computes SHA-256 hashes of the `done` actions and detects when an agent repeats identical or near-identical steps $\ge 3$ times consecutively.
 
-### Commands & Signals
-- `SP loop-guard status` — Check current repetition counters and pattern hashes.
-- `SP loop-guard nudge` — Propose an alternate hypothesis when 2 identical failures occur.
-- `SP loop-guard break` — Circuit-breaker: immediately halt execution when a failure repeats 3+ times.
-- `SP loop-guard auto` — Activate inline pattern inspection across command outputs.
+Unlike TokenEconomizer (which executes a secondary LLM judge model call billed to the user), Session Pilot Pro Plus performs this check **offline on stored checkpoint data with zero token cost and zero latency**.
+
+### CLI Usage
+```bash
+python scripts/sp.py loop-guard [--session <id>] [--threshold 3] [--verbose]
+```
+
+### Prompt Convention
+When an agent notices repeated failures or tests failing with identical output, it triggers `SP loop-guard` to verify if a cycle has formed and pivot to an alternative hypothesis.
+
+---
+
+## 2. Tool Schema Pruning (`SP prune-tools`)
+
+### Reality & Mechanism Boundary
+- **What a prompt can do (◐ Advisory):** Advise the model to ignore unused tool schemas and restrict tool calls to relevant candidates.
+- **What a prompt cannot do:** A prompt or skill file cannot strip tool schema definitions out of the HTTP payload sent to the LLM API, because harnesses serialize tools into the request JSON before model generation begins.
+- **True payload pruning:** Requires harness-level settings hooks (such as TokenEconomizer's config deny-lists or custom client proxies).

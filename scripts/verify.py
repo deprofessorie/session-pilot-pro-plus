@@ -186,11 +186,66 @@ def test_session_lifecycle(store, R: Results):
 
 def test_budget_estimate():
     """Pure function test — no store needed."""
-    # 5 words → round(5 × 1.33) = round(6.65) = 7 tokens
     words = "hello world foo bar baz".split()
     tokens = round(len(words) * 1.33)
     assert tokens == 7, f"expected 7, got {tokens}"
     return True
+
+
+def test_loop_detection(store, R: Results):
+    """Test real checkpoint loop detection."""
+    sys.path.insert(0, str(SCRIPT_DIR / "scripts"))
+    import sp
+    sid = f"verify-loop-{int(time.time())}"
+    # Save 3 identical checkpoints
+    store.save(sid, done="failed test assertion A", next="retry")
+    store.save(sid, done="failed test assertion A", next="retry")
+    store.save(sid, done="failed test assertion A", next="retry")
+
+    state = store.load(sid)
+    loop = sp.detect_loop(state, threshold=3)
+    R.check("loop detection triggers on 3 identical checkpoints", loop["detected"] is True, f"count={loop['count']}")
+
+    # Save a different checkpoint
+    store.save(sid, done="fixed test assertion A", next="continue")
+    state = store.load(sid)
+    loop_broken = sp.detect_loop(state, threshold=3)
+    R.check("loop detection clears when distinct checkpoint is saved", loop_broken["detected"] is False, f"count={loop_broken['count']}")
+    store.delete(sid)
+
+
+def test_compaction(store, R: Results):
+    """Test checkpoint list compaction in session store."""
+    sid = f"verify-compact-{int(time.time())}"
+    for i in range(10):
+        store.save(sid, done=f"step {i}", next=f"step {i+1}")
+
+    state = store.load(sid)
+    orig_len = len(state.get("checkpoints", []))
+    R.check("pre-compaction has 10 checkpoints", orig_len == 10, f"count={orig_len}")
+
+    # Compact down to 5 using the new checkpoints parameter
+    store.save(sid, checkpoints=state.get("checkpoints", [])[-5:])
+
+    compacted = store.load(sid)
+    new_len = len(compacted.get("checkpoints", []))
+    R.check("post-compaction has 5 checkpoints", new_len == 5, f"count={new_len}")
+    store.delete(sid)
+
+
+def test_post_turn_harvest(store, R: Results):
+    """Test auto-harvesting facts from commands."""
+    sys.path.insert(0, str(SCRIPT_DIR / "hooks"))
+    import post_turn
+    proj = f"verify-harvest-{int(time.time())}"
+    post_turn.harvest_command_facts("pnpm run build", project=proj, store_override=store)
+    post_turn.harvest_command_facts("pytest tests/ -v", project=proj, store_override=store)
+
+    facts = store.fact_list(proj)
+    R.check("harvested build command", "build_cmd" in facts and "pnpm" in facts["build_cmd"], f"facts={facts}")
+    R.check("harvested test command", "test_cmd" in facts and "pytest" in facts["test_cmd"], f"facts={facts}")
+    for k in list(facts.keys()):
+        store.fact_delete(proj, k)
 
 
 # ─── Main ──────────────────────────────────────────────────────────────────
@@ -209,7 +264,6 @@ def main():
         if hasattr(store, "db_path"):
             store.db_path = store.home / "storage.db"
             mod._connect(store.db_path).close()
-        # Ensure dirs exist (attribute names differ slightly per adapter)
         dirs = [
             store.home / "sessions",
             store.home / "kv",
@@ -241,6 +295,9 @@ def main():
         test_session_lifecycle(store, R)
         test_budget_estimate()
         R.check("budget estimate (pure fn)", True)
+        test_loop_detection(store, R)
+        test_compaction(store, R)
+        test_post_turn_harvest(store, R)
     except Exception as e:
         R.failed.append(("Exception", str(e)))
 

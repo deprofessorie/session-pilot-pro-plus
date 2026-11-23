@@ -1,13 +1,37 @@
 # Unified Memory & Multi-Agent Handoff
 
-> Inspired by Unified-Memory. Durable state synchronization across sessions and subagents.
+> Mechanism Classification:
+> - **Cross-Agent Memory:** ● Enforced natively via storage adapters (`sp.py memory write/read/sync`).
+> - **Agent Handoff:** ◐ Standardized structured text payload for delegation across subagents.
 
-## Commands
+---
 
-- `SP memory sync [namespace]` — Synchronizes durable key/values across concurrent or sequential agents.
-- `SP memory handoff <agent-role>` — Formats and emits a structured handoff payload for delegating work to another agent or subagent.
+## 1. Cross-Agent Shared Memory (`SP memory`)
 
-## Handoff Payload Schema
+### Mechanism (● Native Store)
+The storage adapters implement isolated, sanitized memory namespaces (`HOME/memory/<namespace>/<key>.json` or SQLite `memory` table with CWE-22 sanitization). Any agent or script with access to the store can read/write shared variables.
+
+### CLI Commands
+```bash
+# Write shared key
+python scripts/sp.py memory write --namespace team-alpha --key framework fastapi
+
+# Read shared key
+python scripts/sp.py memory read --namespace team-alpha --key framework
+
+# List namespace keys
+python scripts/sp.py memory list --namespace team-alpha
+
+# Sync / summarize all active namespaces
+python scripts/sp.py memory sync
+```
+
+---
+
+## 2. Multi-Agent Handoff Schema (`SP memory handoff`)
+
+When delegating a task to a subagent (via `invoke_subagent` or board messages), format the instruction using this structured schema to minimize context overhead:
+
 ```markdown
 ### Agent Handoff Payload
 - **Source Session:** `<session-id>`

@@ -8,25 +8,25 @@
       "adapter": "json_file",
       "name": "High Checkpoint Volume (50 saves)",
       "passed": true,
-      "duration_ms": 572.3205999820493,
+      "duration_ms": 722.3620000004303,
       "silent_corruption": false,
-      "details": "Successfully saved 50 checkpoints. Total: 572.3ms, Avg: 11.45ms/op",
+      "details": "Successfully saved 50 checkpoints. Total: 722.4ms, Avg: 14.45ms/op",
       "error": null
     },
     {
       "adapter": "json_file",
       "name": "High Checkpoint Volume (100 saves)",
       "passed": true,
-      "duration_ms": 1129.4115000055172,
+      "duration_ms": 1472.3164000024553,
       "silent_corruption": false,
-      "details": "Successfully saved 100 checkpoints. Total: 1129.4ms, Avg: 11.29ms/op",
+      "details": "Successfully saved 100 checkpoints. Total: 1472.3ms, Avg: 14.72ms/op",
       "error": null
     },
     {
       "adapter": "json_file",
       "name": "Session Truncation/Rotation (Cap at 20 FIFO)",
       "passed": true,
-      "duration_ms": 680.6789000111166,
+      "duration_ms": 635.148700006539,
       "silent_corruption": false,
       "details": "Strict 20-checkpoint sliding window maintained without data loss or corruption.",
       "error": null
@@ -35,7 +35,7 @@
       "adapter": "json_file",
       "name": "Concurrent Writes: Distinct Sessions (10 threads)",
       "passed": true,
-      "duration_ms": 131.31590001285076,
+      "duration_ms": 114.29019999923185,
       "silent_corruption": false,
       "details": "All 10 threads wrote 5 checkpoints to independent sessions successfully.",
       "error": null
@@ -44,16 +44,16 @@
       "adapter": "json_file",
       "name": "Concurrent Writes: Same Session (5 threads)",
       "passed": true,
-      "duration_ms": 259.25490001100115,
+      "duration_ms": 416.29709998960607,
       "silent_corruption": false,
-      "details": "Total saves attempted: 30. Checkpoints retained: 6 (cap is 20). Crashes: 0\nCheckpoints in DB: ['w4_s0', 'w3_s1', 'w3_s2', 'w3_s3', 'w3_s4', 'w3_s5']",
+      "details": "Total saves attempted: 30. Checkpoints retained: 6 (cap is 20). Crashes: 0\nCheckpoints in DB: ['w2_s0', 'w1_s1', 'w1_s2', 'w1_s3', 'w1_s4', 'w1_s5']",
       "error": null
     },
     {
       "adapter": "json_file",
       "name": "Malformed Data: Empty (0-byte) Session",
       "passed": true,
-      "duration_ms": 18.650000012712553,
+      "duration_ms": 25.873000005958602,
       "silent_corruption": false,
       "details": "load() returned None. save() recovered: True. list() handled: 15 sessions.",
       "error": null
@@ -62,7 +62,7 @@
       "adapter": "json_file",
       "name": "Malformed Data: Invalid JSON Syntax",
       "passed": true,
-      "duration_ms": 35.82349998760037,
+      "duration_ms": 32.212400023126975,
       "silent_corruption": false,
       "details": "load() returned None. save() recovered successfully. list() survived.",
       "error": null
@@ -71,7 +71,7 @@
       "adapter": "json_file",
       "name": "Malformed Data: Non-Dict JSON (Array/Primitive)",
       "passed": true,
-      "duration_ms": 14.647600008174777,
+      "duration_ms": 19.79270001174882,
       "silent_corruption": false,
       "details": "Handled non-dict JSON gracefully. Repaired state: True",
       "error": null
@@ -80,7 +80,7 @@
       "adapter": "json_file",
       "name": "Malformed Data: Checkpoints Field Is Not A List",
       "passed": true,
-      "duration_ms": 13.795100006973371,
+      "duration_ms": 21.775700006401166,
       "silent_corruption": false,
       "details": "Checkpoints field recovered to a valid list.",
       "error": null
@@ -89,7 +89,7 @@
       "adapter": "json_file",
       "name": "Fact Bank: Large Values (1MB & 5MB)",
       "passed": true,
-      "duration_ms": 97.98739998950623,
+      "duration_ms": 169.94439999689348,
       "silent_corruption": false,
       "details": "Successfully stored and retrieved 1MB string and 5MB nested dict.",
       "error": null
@@ -98,7 +98,7 @@
       "adapter": "json_file",
       "name": "Fact Bank: Unicode & Emojis",
       "passed": true,
-      "duration_ms": 13.221300003351644,
+      "duration_ms": 11.885200015967712,
       "silent_corruption": false,
       "details": "Full UTF-8 / Emoji roundtrip, listing, and deletion passed.",
       "error": null
@@ -107,7 +107,7 @@
       "adapter": "json_file",
       "name": "Fact Bank: Keys with Windows Reserved Chars & Slashes",
       "passed": true,
-      "duration_ms": 99.56269999383949,
+      "duration_ms": 148.45120001700707,
       "silent_corruption": false,
       "details": "All 10 special/reserved keys handled without error.",
       "error": null
@@ -116,7 +116,7 @@
       "adapter": "json_file",
       "name": "Fact Bank: Non-Existent Keys & Deletion",
       "passed": true,
-      "duration_ms": 0.3730999887920916,
+      "duration_ms": 0.5707000091206282,
       "silent_corruption": false,
       "details": "Gracefully returned None, False, and empty dict for missing entities.",
       "error": null
@@ -125,7 +125,7 @@
       "adapter": "json_file",
       "name": "Path Traversal: Session ID Escape",
       "passed": true,
-      "duration_ms": 192.1188999840524,
+      "duration_ms": 177.99899997771718,
       "silent_corruption": false,
       "details": "All 5 malicious session IDs contained safely (hashed/isolated).",
       "error": null
@@ -134,7 +134,7 @@
       "adapter": "json_file",
       "name": "Path Traversal: KV & Fact Bank project/key",
       "passed": true,
-      "duration_ms": 206.98239997727796,
+      "duration_ms": 592.1147000044584,
       "silent_corruption": false,
       "details": "Project, namespace, and key boundaries strictly enforced.",
       "error": null
@@ -143,25 +143,25 @@
       "adapter": "sqlite",
       "name": "High Checkpoint Volume (50 saves)",
       "passed": true,
-      "duration_ms": 2243.8863000134006,
+      "duration_ms": 938.6535999947228,
       "silent_corruption": false,
-      "details": "Successfully saved 50 checkpoints. Total: 2243.9ms, Avg: 44.88ms/op",
+      "details": "Successfully saved 50 checkpoints. Total: 938.7ms, Avg: 18.77ms/op",
       "error": null
     },
     {
       "adapter": "sqlite",
       "name": "High Checkpoint Volume (100 saves)",
       "passed": true,
-      "duration_ms": 3187.0146000001114,
+      "duration_ms": 1853.864300006535,
       "silent_corruption": false,
-      "details": "Successfully saved 100 checkpoints. Total: 3187.0ms, Avg: 31.87ms/op",
+      "details": "Successfully saved 100 checkpoints. Total: 1853.9ms, Avg: 18.54ms/op",
       "error": null
     },
     {
       "adapter": "sqlite",
       "name": "Session Truncation/Rotation (Cap at 20 FIFO)",
       "passed": true,
-      "duration_ms": 1762.078300002031,
+      "duration_ms": 1016.523700003745,
       "silent_corruption": false,
       "details": "Strict 20-checkpoint sliding window maintained without data loss or corruption.",
       "error": null
@@ -170,7 +170,7 @@
       "adapter": "sqlite",
       "name": "Concurrent Writes: Distinct Sessions (10 threads)",
       "passed": true,
-      "duration_ms": 636.1380000016652,
+      "duration_ms": 526.4972999866586,
       "silent_corruption": false,
       "details": "All 10 threads wrote 5 checkpoints to independent sessions successfully.",
       "error": null
@@ -179,16 +179,16 @@
       "adapter": "sqlite",
       "name": "Concurrent Writes: Same Session (5 threads)",
       "passed": true,
-      "duration_ms": 371.44139999873005,
+      "duration_ms": 366.1951000103727,
       "silent_corruption": false,
-      "details": "Total saves attempted: 30. Checkpoints retained: 9 (cap is 20). Crashes: 0\nCheckpoints in DB: ['w0_s0', 'w3_s1', 'w1_s1', 'w2_s2', 'w2_s3', 'w2_s4', 'w4_s5', 'w0_s5', 'w3_s5']",
+      "details": "Total saves attempted: 30. Checkpoints retained: 8 (cap is 20). Crashes: 0\nCheckpoints in DB: ['w1_s0', 'w2_s1', 'w2_s2', 'w3_s2', 'w1_s4', 'w1_s5', 'w2_s4', 'w2_s5']",
       "error": null
     },
     {
       "adapter": "sqlite",
       "name": "Malformed Data: Empty (0-byte) Session",
       "passed": true,
-      "duration_ms": 62.977800000226125,
+      "duration_ms": 62.641700002131984,
       "silent_corruption": false,
       "details": "load() returned None. save() recovered: True. list() handled: 15 sessions.",
       "error": null
@@ -197,7 +197,7 @@
       "adapter": "sqlite",
       "name": "Malformed Data: Invalid JSON Syntax",
       "passed": true,
-      "duration_ms": 56.39119999250397,
+      "duration_ms": 61.41730002127588,
       "silent_corruption": false,
       "details": "load() returned None. save() recovered successfully. list() survived.",
       "error": null
@@ -206,7 +206,7 @@
       "adapter": "sqlite",
       "name": "Malformed Data: Non-Dict JSON (Array/Primitive)",
       "passed": true,
-      "duration_ms": 56.24869998428039,
+      "duration_ms": 64.04089997522533,
       "silent_corruption": false,
       "details": "Handled non-dict JSON gracefully. Repaired state: True",
       "error": null
@@ -215,7 +215,7 @@
       "adapter": "sqlite",
       "name": "Malformed Data: Checkpoints Field Is Not A List",
       "passed": true,
-      "duration_ms": 28.66479998920113,
+      "duration_ms": 27.040299988584593,
       "silent_corruption": false,
       "details": "Checkpoints field recovered to a valid list.",
       "error": null
@@ -224,7 +224,7 @@
       "adapter": "sqlite",
       "name": "Fact Bank: Large Values (1MB & 5MB)",
       "passed": true,
-      "duration_ms": 289.86999997869134,
+      "duration_ms": 211.42229999531992,
       "silent_corruption": false,
       "details": "Successfully stored and retrieved 1MB string and 5MB nested dict.",
       "error": null
@@ -233,7 +233,7 @@
       "adapter": "sqlite",
       "name": "Fact Bank: Unicode & Emojis",
       "passed": true,
-      "duration_ms": 38.99119998095557,
+      "duration_ms": 28.231000003870577,
       "silent_corruption": false,
       "details": "Full UTF-8 / Emoji roundtrip, listing, and deletion passed.",
       "error": null
@@ -242,7 +242,7 @@
       "adapter": "sqlite",
       "name": "Fact Bank: Keys with Windows Reserved Chars & Slashes",
       "passed": true,
-      "duration_ms": 162.81459998572245,
+      "duration_ms": 157.41080002044328,
       "silent_corruption": false,
       "details": "All 10 special/reserved keys handled without error.",
       "error": null
@@ -251,7 +251,7 @@
       "adapter": "sqlite",
       "name": "Fact Bank: Non-Existent Keys & Deletion",
       "passed": true,
-      "duration_ms": 6.478600000264123,
+      "duration_ms": 8.017099986318499,
       "silent_corruption": false,
       "details": "Gracefully returned None, False, and empty dict for missing entities.",
       "error": null
@@ -260,7 +260,7 @@
       "adapter": "sqlite",
       "name": "Path Traversal: Session ID Escape",
       "passed": true,
-      "duration_ms": 150.8377999998629,
+      "duration_ms": 151.28120000008494,
       "silent_corruption": false,
       "details": "All 5 malicious session IDs contained safely (hashed/isolated).",
       "error": null
@@ -269,7 +269,7 @@
       "adapter": "sqlite",
       "name": "Path Traversal: KV & Fact Bank project/key",
       "passed": true,
-      "duration_ms": 0.0007999769877642393,
+      "duration_ms": 0.0016999838408082724,
       "silent_corruption": false,
       "details": "Project, namespace, and key boundaries strictly enforced.",
       "error": null

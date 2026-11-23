@@ -1,7 +1,7 @@
 # Session Pilot Pro Plus — Official Launch & Marketing Kit 🚀
 
 > **Repository:** [https://github.com/deprofessorie/session-pilot-pro-plus](https://github.com/deprofessorie/session-pilot-pro-plus)  
-> **Release:** v2.1.3 (Enterprise Hardened)  
+> **Release:** v3.0.0 (Honest Rebuild)  
 > **License:** MIT  
 > **Core Value:** Zero-dependency, zero-hook, prompt-first agent memory, context economics, and execution control platform.
 

@@ -172,13 +172,16 @@ class SessionStore:
         title: Optional[str] = None,
         goal: Optional[str] = None,
         status: Optional[str] = None,
+        checkpoints: Optional[List[dict]] = None,
     ) -> dict:
-        """Append a checkpoint; update optional fields."""
+        """Append a checkpoint or set checkpoints list; update optional fields."""
         state = self.load(session_id)
         if not isinstance(state, dict):
             state = self.create(session_id, title or "", goal or "")
 
-        if not isinstance(state.get("checkpoints"), list):
+        if checkpoints is not None:
+            state["checkpoints"] = checkpoints
+        elif not isinstance(state.get("checkpoints"), list):
             state["checkpoints"] = []
 
         if done or next:
