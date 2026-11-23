@@ -4,10 +4,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.8+](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
+[![CI: Automated](https://img.shields.io/badge/CI-Automated%20(Ubuntu%20%2B%20Windows)-blue.svg)](.github/workflows/ci.yml)
 [![Tests: 34/34 Passed](https://img.shields.io/badge/Tests-34%2F34%20Passed-brightgreen.svg)](scripts/verify.py)
 [![Reliability Audit: 30/30](https://img.shields.io/badge/Stress%20Audit-30%2F30%20Passed-brightgreen.svg)](tests/stress_audit.py)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0%20(Pure%20Stdlib)-orange.svg)](adapters/)
-[![Release: v3.0.0](https://img.shields.io/badge/Release-v3.0.0%20(Honest%20Rebuild)-purple.svg)](https://github.com/deprofessorie/session-pilot-pro-plus)
+[![Release: v3.0.1](https://img.shields.io/badge/Release-v3.0.1%20(Honest%20Rebuild)-purple.svg)](https://github.com/deprofessorie/session-pilot-pro-plus)
 
 **Lightweight, zero-dependency session memory, context discipline, and execution router for AI coding agents.**
 
@@ -60,8 +61,8 @@ Copy `SKILL.md` into your harness skills directory:
 - Gemini / Antigravity: `~/.gemini/config/skills/session-pilot-pro-plus/SKILL.md`
 - OpenCode: `~/.config/opencode/skills/session-pilot-pro-plus/SKILL.md`
 
-### Option B: Automatic Lifecycle Hooks (Native Integration)
-To enable automatic `recall` on session start and `save` on session stop in Claude Code and OpenCode:
+### Option B: Automatic Lifecycle Hooks (Claude Code Native)
+To enable automatic `recall` on session start, safe non-destructive state flush on stop, and automatic test/build fact harvesting on Bash commands in Claude Code:
 ```bash
 python hooks/install_hooks.py
 ```

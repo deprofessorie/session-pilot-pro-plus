@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verification Suite (34 tests)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+        adapter: [json_file, sqlite]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run verification suite (${{ matrix.adapter }})
+        run: python scripts/verify.py --adapter ${{ matrix.adapter }}
+
+  stress-audit:
+    name: Concurrency & Stress Audit (30 scenarios)
+    runs-on: ubuntu-latest
+    needs: verify
+    strategy:
+      matrix:
+        adapter: [json_file, sqlite]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run stress audit (${{ matrix.adapter }})
+        run: python tests/stress_audit.py --adapter ${{ matrix.adapter }}
+
+  storage-bench:
+    name: Storage Benchmark Validation
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run bench_storage.py
+        run: python scripts/bench_storage.py --iterations 50
+
+  lint-and-docs:
+    name: Documentation & LICENSE Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check required documents exist
+        run: |
+          for f in LICENSE SKILL.md README.md COMPATIBILITY.md BENCHMARKS.md STORAGE_ADAPTERS.md; do
+            if [ ! -f "$f" ]; then
+              echo "::error:: Missing required document: $f"
+              exit 1
+            fi
+          done
+
+      - name: Check CLI help & commands
+        run: |
+          python scripts/sp.py --help
+          python scripts/sp.py tier-check "Review distributed transaction locking"
+          python scripts/sp.py budget "scripts/sp.py" --limit 3000

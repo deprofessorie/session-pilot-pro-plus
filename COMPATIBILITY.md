@@ -11,7 +11,7 @@ Session Pilot Pro Plus operates in two tiers:
 | Capability | Mechanism | Claude Code | Gemini CLI / Antigravity | OpenCode | Cursor / Codex CLI | Web (ChatGPT / Claude.ai) |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
 | **Session State (save/recall)** | ● Native Store | ✅ (Hook/CLI) | ✅ (Rule/CLI) | ✅ (CLI) | ✅ (CLI) | ◐ (In-context) |
-| **Session Start/Stop Hooks** | ● Native Hook | ✅ (`settings.json`) | ✅ (`user_rules`) | ◐ Advisory¹ | ◐ Advisory | ❌ N/A |
+| **Session Start/Stop Hooks** | ● Native / ◐ Advisory | ✅ (`settings.json`) | ◐ Advisory (`user_rules`) | ◐ Advisory¹ | ◐ Advisory | ❌ N/A |
 | **Repo Fact Bank (fact set/get)** | ● Native Store | ✅ | ✅ | ✅ | ✅ | ◐ (In-context) |
 | **Auto-Harvest Facts Hook** | ● PostToolUse Hook | ✅ (`Bash` matcher) | ◐ (`sp.py harvest`) | ◐ (`sp.py harvest`) | ◐ (`sp.py harvest`) | ❌ N/A |
 | **Cross-Agent Memory (sync/read/write)** | ● Native Store | ✅ | ✅ | ✅ | ✅ | ❌ N/A |
@@ -21,9 +21,10 @@ Session Pilot Pro Plus operates in two tiers:
 | **Caveman Dialect** | ◐ Prompt Advisory | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Model Tier Triage (T0..T3)** | ◐ Advisory Heuristic | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Pre-Turn Token Budget** | ◐ Advisory Heuristic | ✅ | ✅ | ✅ | ✅ | ✅ |
-| **Skill Discovery (SP find)** | ● Filesystem Scan | ✅ | ✅ | ✅ | ✅ | ❌ N/A |
+| **Skill Discovery (SP find)** | ● Filesystem Scan² | ✅ | ✅ | ✅ | ✅ | ❌ N/A |
 
-> ¹ OpenCode loads JavaScript plugins (`plugin/*.js`); Python hook auto-invocation in OpenCode requires calling `python scripts/sp.py` from CLI or wrapping in a JS plugin.
+> ¹ OpenCode loads JavaScript plugins (`plugin/*.js`); Python hook auto-invocation in OpenCode requires calling `python scripts/sp.py` from CLI or wrapping in a JS plugin.  
+> ² On web agents or sandboxes without local filesystem access, `SP find` degrades to in-context inspection.
 
 ---
 
