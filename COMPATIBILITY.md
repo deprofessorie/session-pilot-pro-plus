@@ -15,8 +15,13 @@ Session Pilot Pro Plus is a **prompt-only skill** — it works wherever the agen
 | **Core: SP mark-done** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Core: SP optimizers** | ✅¹ | ✅¹ | ✅¹ | ✅¹ | ✅¹ | ✅¹ | ✅¹ | ⚠️² |
 | **Core: SP import** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Ponytail: SP ponytail (lite/full/ultra)** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Micro-Skills: SP fact (set/get/list)** | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ |
 | **Opt-in: SP prune-tools** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Opt-in: SP loop-guard** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Opt-in: SP tier-check** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Opt-in: SP compact / caveman** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Opt-in: SP memory handoff** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Opt-in: SP micro-skill** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Opt-in: SP call-model** | ⚠️³ | ⚠️³ | ⚠️³ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Opt-in: SP index / query** | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ | ⚠️⁴ |

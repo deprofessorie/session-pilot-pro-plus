@@ -23,6 +23,12 @@ interface StorageAdapter {
   kvDelete(project: string, key: string): Promise<void>;
   kvList(project: string): Promise<string[]>;
 
+  // Repo micro-skills & fact bank (for SP fact)
+  factSet(project: string, key: string, value: unknown): Promise<void>;
+  factGet(project: string, key: string): Promise<unknown | null>;
+  factDelete(project: string, key: string): Promise<void>;
+  factList(project: string): Promise<Record<string, unknown>>;
+
   // Cross-agent memory (for SP memory sync)
   memoryWrite(namespace: string, key: string, value: unknown): Promise<void>;
   memoryRead(namespace: string, key: string): Promise<unknown | null>;
@@ -42,6 +48,7 @@ interface SessionState {
   status: "active" | "done";
   style?: string;
   globalStyle?: string;
+  ponytailMode?: "lite" | "full" | "ultra" | "off";
   checkpoints: Checkpoint[];
   learnedFacts: Fact[];
   createdAt: number;
