@@ -582,7 +582,7 @@ def main():
     p_tier.add_argument("task")
 
     # budget
-    p_budget = subparsers.add_parser("budget", help="Token estimate (+-15% heuristic or tiktoken)")
+    p_budget = subparsers.add_parser("budget", help="Token estimate (+/-15%% heuristic or tiktoken)")
     p_budget.add_argument("target", help="Text string or file path")
     p_budget.add_argument("--limit", type=int, default=2000)
 
