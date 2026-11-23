@@ -1,7 +1,19 @@
 # Session Pilot Pro Plus
 
-**The unified agent memory, context economics, and execution control platform.**
+<div align="center">
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python: 3.8+](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
+[![Tests: 30/30 Passed](https://img.shields.io/badge/Tests-30%2F30%20Passed-brightgreen.svg)](tests/)
+[![Zero Dependencies](https://img.shields.io/badge/Dependencies-0%20(Pure%20Stdlib)-orange.svg)](adapters/)
+[![Release: v2.1.3](https://img.shields.io/badge/Release-v2.1.3%20(Hardened)-purple.svg)](https://github.com/deprofessorie/session-pilot-pro-plus)
+
+**The unified agent memory, context economics, and execution control platform.**  
 *Absorbs and unifies every core competitor capability: [TokenEconomizer](https://github.com/microsoft/TokenEconomizer) (micro-skills, tool pruning, loop guard), [Ponytail](https://github.com/obra/ponytail) (lazy senior dev, minimal diff, YAGNI, transparency footers), Efficiency-Router (model tier triage), Caveman/Strategic-Compact (high-density context compression), and Unified Memory.*
+
+</div>
+
+---
 
 Session Pilot Pro Plus eliminates fragmented agent setups by packing the best capabilities across the AI ecosystem into a single, prompt-first Markdown skill. It provides session recall, skill routing, pre-turn token budgeting, repo facts harvesting, tool schema pruning, loop breaking, task tier routing, and senior developer diff minimization—with zero runtime lock-in, zero hook requirements, and zero secondary model billing.
 
