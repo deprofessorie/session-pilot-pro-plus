@@ -184,12 +184,24 @@ def test_session_lifecycle(store, R: Results):
     R.check("list excludes deleted session", sid1 not in ids2 and sid2 in ids2, f"ids={ids2}")
 
 
-def test_budget_estimate():
-    """Pure function test — no store needed."""
+def test_budget_estimate(R: Results):
+    """Test token estimation on complex code with symbols, escapes, and CJK characters."""
+    sys.path.insert(0, str(SCRIPT_DIR / "scripts"))
+    import sp
+    sample_code = """
+    def parse_symbols(text: str) -> dict:
+        # Regex characters: []{}();:=<>+*/_&|~^%!@#$"\'\\
+        arr = [1, 2, {"key": "val"}]
+        cjk_text = "你好世界，こんにちは"
+        return {"result": len(arr), "cjk": cjk_text}
+    """
+    est = sp.estimate_tokens(sample_code)
+    R.check("budget estimate runs on code symbols without regex crash", est["tokens"] > 0, f"tokens={est['tokens']}")
+    R.check("budget estimate detects code symbols", est.get("code_symbols", 0) > 10, f"symbols={est.get('code_symbols')}")
+    R.check("budget estimate detects CJK characters", est.get("cjk_chars", 0) > 5, f"cjk={est.get('cjk_chars')}")
     words = "hello world foo bar baz".split()
     tokens = round(len(words) * 1.33)
-    assert tokens == 7, f"expected 7, got {tokens}"
-    return True
+    R.check("budget estimate (pure fn formula)", tokens == 7, f"got {tokens}")
 
 
 def test_loop_detection(store, R: Results):
@@ -255,34 +267,29 @@ def test_post_turn_harvest(store, R: Results):
 # ─── Main ──────────────────────────────────────────────────────────────────
 def main():
     import argparse
+    import shutil
+    import tempfile
     ap = argparse.ArgumentParser()
     ap.add_argument("--adapter", default="json_file", choices=["json_file", "sqlite"])
     ap.add_argument("--home", default=None)
     args = ap.parse_args()
 
     mod = load_adapter(args.adapter)
-    store = mod.get_store()
+    cleanup_temp = False
+
     if args.home:
-        store.home = Path(args.home)
-        store.home.mkdir(parents=True, exist_ok=True)
-        if hasattr(store, "db_path"):
-            store.db_path = store.home / "storage.db"
-            mod._connect(store.db_path).close()
-        dirs = [
-            store.home / "sessions",
-            store.home / "kv",
-            store.home / "facts",
-            store.home / "memory",
-            store.home / "index",
-        ]
-        for d in dirs:
-            d.mkdir(parents=True, exist_ok=True)
-        if hasattr(store, "sessions_dir"):
-            store.sessions_dir = dirs[0]
-            store.kv_dir = dirs[1]
-            store.facts_dir = dirs[2]
-            store.memory_dir = dirs[3]
-            store.index_dir = dirs[4]
+        storage_home = Path(args.home)
+    else:
+        # Default to an isolated temporary directory so tests never pollute live user storage
+        storage_home = Path(tempfile.mkdtemp(prefix=f"sp_verify_{args.adapter}_"))
+        cleanup_temp = True
+
+    storage_home.mkdir(parents=True, exist_ok=True)
+    if args.adapter == "json_file":
+        store = mod.SessionStore(home=storage_home)
+    else:
+        db_path = storage_home / "storage.db"
+        store = mod.SessionStore(db_path=db_path)
 
     R = Results()
     print(f"Running verification with adapter: {args.adapter}")
@@ -297,13 +304,20 @@ def main():
         test_memory_sync(store, R)
         test_semantic_index(store, R)
         test_session_lifecycle(store, R)
-        test_budget_estimate()
-        R.check("budget estimate (pure fn)", True)
+        test_budget_estimate(R)
         test_loop_detection(store, R)
         test_compaction(store, R)
         test_post_turn_harvest(store, R)
     except Exception as e:
         R.failed.append(("Exception", str(e)))
+    finally:
+        if cleanup_temp:
+            import gc
+            gc.collect()
+            try:
+                shutil.rmtree(storage_home, ignore_errors=True)
+            except Exception:
+                pass
 
     print(R.summary())
     sys.exit(0 if not R.failed else 1)

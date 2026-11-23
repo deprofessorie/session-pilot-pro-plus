@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verification Suite (34 tests)
+    name: Verification Suite (37 tests)
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

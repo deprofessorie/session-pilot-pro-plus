@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)](https://www.python.org/)
 [![CI: Automated](https://img.shields.io/badge/CI-Automated%20(Ubuntu%20%2B%20Windows)-blue.svg)](.github/workflows/ci.yml)
-[![Tests: 34/34 Passed](https://img.shields.io/badge/Tests-34%2F34%20Passed-brightgreen.svg)](scripts/verify.py)
+[![Tests: 37/37 Passed](https://img.shields.io/badge/Tests-37%2F37%20Passed-brightgreen.svg)](scripts/verify.py)
 [![Reliability Audit: 30/30](https://img.shields.io/badge/Stress%20Audit-30%2F30%20Passed-brightgreen.svg)](tests/stress_audit.py)
 [![Zero Dependencies](https://img.shields.io/badge/Dependencies-0%20(Pure%20Stdlib)-orange.svg)](adapters/)
 [![Release: v3.0.1](https://img.shields.io/badge/Release-v3.0.1%20(Honest%20Rebuild)-purple.svg)](https://github.com/deprofessorie/session-pilot-pro-plus)
@@ -99,7 +99,7 @@ python scripts/sp.py find "react frontend router"
 Session Pilot Pro Plus includes two automated test suites with 0 external dependencies:
 
 ```bash
-# 1. Feature verification suite (31 tests across both adapters)
+# 1. Feature verification suite (37 tests across both adapters)
 python scripts/verify.py --adapter json_file
 python scripts/verify.py --adapter sqlite
 
@@ -110,7 +110,7 @@ python tests/stress_audit.py --adapter sqlite
 # 3. Storage latency & throughput empirical benchmark
 python scripts/bench_storage.py --iterations 100
 
-# 4. Multi-turn end-to-end A/B token & cost evaluation
+# 4. Modeled 15-turn trajectory & sensitivity analysis
 python scripts/eval_ab.py
 
 # 5. Interactive REPL for local testing

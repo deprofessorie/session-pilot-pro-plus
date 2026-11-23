@@ -49,7 +49,7 @@ try:
 except Exception:
     store = None
 
-VERSION = "3.0.0"
+VERSION = "3.0.1"
 
 SECRET_PATTERNS = [
     (re.compile(r'ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}'), '[REDACTED_JWT]'),
@@ -116,7 +116,7 @@ def estimate_tokens(text: str) -> dict:
     words = len(text.split())
     chars = len(text)
     cjk = len(re.findall(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]', text))
-    code_sym = len(re.findall(r'[{}\[\]();:=<>+*/_&|~^%!@#$\'\"\\\]', text))
+    code_sym = len(re.findall(r'[{}()\[\];:=<>+*/_&|~^%!@#$"\'\\]', text))
 
     # Try tiktoken if available (accurate); fall back to heuristic
     try:

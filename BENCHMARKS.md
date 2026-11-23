@@ -24,15 +24,16 @@ Direct measurements across 100 rapid checkpoint saves, loads, and fact operation
 
 ---
 
-## 2. End-to-End Multi-Turn A/B Evaluation
+## 2. Modeled 15-Turn Scenario & Sensitivity Analysis
 
-To measure the compound effect of Session Pilot Pro Plus across multi-turn developer workflows, a reproducible test harness is included in [`scripts/eval_ab.py`](scripts/eval_ab.py).
+To model the theoretical compound efficiency gain across multi-turn developer workflows, a reproducible simulation harness is provided in [`scripts/eval_ab.py`](scripts/eval_ab.py).
 
-The harness executes a standardized 15-turn real-world software engineering scenario (scaffolding, test discovery, context interruption & resumption, transaction bug fix, and linting) across two tracks:
-- **Condition A (Baseline / Amnesic Agent):** No persistent task memory, discovery through trial-and-error command execution, verbose conversational padding, and whole-file replacements.
-- **Condition B (Session Pilot Pro Plus):** Checkpoint restoration (`sp.py recall`), pre-cached repository facts (`test_cmd`, `build_cmd`), Ponytail minimal diffs, and lean dialect.
+> **Methodology & Sensitivity Notice:**
+> - **Simulation Model:** This is a modeled sensitivity benchmark across a standardized 15-turn sequence (scaffolding, test discovery, interruption/resumption, surgical bug fix, linting).
+> - **Assumptions:** Baseline profile assumes an unaugmented agent executing whole-file rewrites and trial-and-error discovery. Condition B assumes 100% adherence to Ponytail minimal diffs and lean caveman dialect. Real-world savings vary with model verbosity and task complexity.
+> - **Token Counting:** Calibrated BPE tokenizer (`cl100k_base` standard).
 
-### Empirical Measurements across 15 Turns
+### Modeled Trajectory Comparison across 15 Turns
 
 | Metric | Condition A (Baseline) | Condition B (Session Pilot Pro Plus) | Absolute Reduction | Overall % Reduction |
 | :--- | :---: | :---: | :---: | :---: |
