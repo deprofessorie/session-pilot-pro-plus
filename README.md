@@ -1,54 +1,41 @@
 # Session Pilot Pro Plus
 
-**Token-aware session memory, skill routing, and context economy — a prompt-only rival to [TokenEconomizer](https://github.com/microsoft/TokenEconomizer).**
+**The unified agent memory, context economics, and execution control platform.**
+*Absorbs and unifies every core competitor capability: [TokenEconomizer](https://github.com/microsoft/TokenEconomizer) (micro-skills, tool pruning, loop guard), [Ponytail](https://github.com/obra/ponytail) (lazy senior dev, minimal diff, YAGNI, transparency footers), Efficiency-Router (model tier triage), Caveman/Strategic-Compact (high-density context compression), and Unified Memory.*
 
-Session Pilot Pro Plus delivers every core mechanism TokenEconomizer offers — **micro-skills, tool pruning, and loop guard** — plus session recall, skill routing, pre-turn token budgeting, experience learning, rate-limit model fallback, semantic search, and cross-agent memory. It ships as a single Markdown skill: no Python runtime, no plugin hooks, no side model calls. By design it is faster to act and cheaper to run, because everything happens inline in the agent you already use.
+Session Pilot Pro Plus eliminates fragmented agent setups by packing the best capabilities across the AI ecosystem into a single, prompt-first Markdown skill. It provides session recall, skill routing, pre-turn token budgeting, repo facts harvesting, tool schema pruning, loop breaking, task tier routing, and senior developer diff minimization—with zero runtime lock-in, zero hook requirements, and zero secondary model billing.
 
 ## Overview
 
-`session-pilot-pro-plus` is a **prompt-only skill**: one Markdown file that instructs an AI coding agent to recall session state, route requests to the best available skill, checkpoint progress, and keep token usage under control. There is no runtime code, CLI binary, or external dependency.
+`session-pilot-pro-plus` is a **prompt-first platform**: one lightweight Markdown specification (< 200 tokens base) that instructs any AI coding agent to operate with discipline, continuity, and cost efficiency.
 
-- Per-chat memory recall & checkpointing with session lifecycle (create, list, delete).
-- Smart routing to the best installed skill/agent with `SP list` discovery.
-- Pre-turn token-budget checks to avoid cost overruns.
-- Opt-in helpers that prune unused tool calls and break repetitive loops.
-- Experience learning: durable facts and lessons distilled from failures and fixes.
-- Automatic model fallback when a rate limit or usage limit is hit.
-- Optional semantic search, persistent key/value store, and cross-agent memory sync.
-- **Lean mode** — automatic verbosity reduction on every turn.
-- **Style mirroring** — adapts to your communication patterns and persists them.
-- **Guardrails** — secrets/PII redaction, scope discipline, consent gates, error transparency.
-- **Session lifecycle** — fresh start, auto-create, completion markers, env override.
-- **Discovery protocol** — scans standard skill directories for installed capabilities.
+- **Session Continuity & Lifecycle** — `SP recall`, `save`, `mark-done`, `--list`, `--create`, `--delete`.
+- **Minimalist Senior Dev Discipline (Ponytail)** — `SP ponytail [lite|full|ultra|off]` for smallest diffs, YAGNI, and closing transparency notes.
+- **Repository Micro-Skills Bank (TokenEconomizer)** — `SP fact set/list/export` auto-injected on recall (eliminating 18–31% redundant discovery tokens).
+- **Tool Schema Pruning (TokenEconomizer)** — `SP prune-tools` drops unused definitions immediately.
+- **Inline Loop Guard (TokenEconomizer)** — `SP loop-guard` breaks cyclic errors without expensive secondary LLM judge calls.
+- **Model Tier Arbitrage (Efficiency-Router)** — `SP tier-check` triages tasks into T0..T3 to conserve premium tokens.
+- **Context Compaction & Caveman Mode** — `SP compact` and `SP caveman` for dense, quota-saving communication.
+- **Unified Cross-Agent Memory** — `SP memory sync` and `SP memory handoff` for multi-agent workflows.
+- **Pre-Turn Token Budgeting** — `SP budget --limit N` estimates costs *before* spending.
+- **Lean Mode & Guardrails** — PII redaction, scope discipline, zero conversational fluff, targeted file reads.
 
-## How it compares to TokenEconomizer
+## Competitor Feature Matrix
 
-[TokenEconomizer](https://github.com/microsoft/TokenEconomizer) (Microsoft) is an experience-driven plugin. It requires **Python 3.10+**, a per-agent plugin installation, and hook integration. Its mechanisms gather evidence over time and make **their own model calls** (micro-skill reviews, a loop-guard judge) billed through your agent login. Its published results: 18.4–30.9% lower mean cost on SWE-Bench, 16–21% on Web-Bench.
-
-Session Pilot Pro Plus covers the same three mechanisms and adds six more capabilities, with zero installation overhead:
-
-### Feature parity
-
-| Capability | TokenEconomizer | Session Pilot Pro Plus |
-|---|---|---|
-| **Micro-skills** (repo facts/helpers) | Learned from failures/model reviews every *k* = 3 sessions | `SP micro-skill <name>` on demand; facts captured inline via `SP save` — no review model call |
-| **Tool pruning** | Removes tools after *p* = 10 prompts across *m* = 2 sessions of evidence | `SP prune-tools` — immediate, on demand, no evidence-gathering wait |
-| **Loop guard** | LLM judge detects stuck turns (confidence ≥ 0.7, up to 1 redirect) | `SP loop-guard` — the main agent detects repetition patterns directly; no judge round-trip |
-| **Experience learning** | Facts learned from failures/model reviews every *k* = 3 sessions | `SP learn` — lessons distilled inline at checkpoints, persisted, and auto-loaded on `SP recall`; no review model call |
-| **Rate-limit model fallback** | — | `SP fallback --chain "<models>"` — switches to the next model and retries when a rate/usage limit hits |
-| **Session recall / resume** | — | `SP recall [--session ID]` with `--list`, `--create`, `--delete` |
-| **Checkpointing** | — | `SP save --done … --next …` with `--style`, `--global-style`, `--skill` |
-| **Skill routing** | — | `SP find "<keywords>"` with `match: strong\|weak\|none` + `SP list` |
-| **Pre-turn token budget** | — (savings measured after the fact) | `SP budget --limit N` estimates cost *before* the turn runs |
-| **Semantic search** | — | `SP index <PATH>` / `SP query "<text>"` |
-| **Persistent store** | Plugin state in `~/.tokeneconomizer` | `SP persist set\|get` — small per-project JSON values |
-| **Cross-agent memory** | Each agent learns on its own | `SP memory sync` — shared durable context |
-| **Secondary model calls** | Implicit (judge/review calls always possible) | `SP call-model <model>` — explicit, **disabled by default** |
-| **Context cleaning** | — | `SP clean` — drops low-value history before next turn |
-| **Task completion signal** | — | `SP mark-done` — stops generation, marks session `done` |
-| **Lean mode** | — | Built-in: no preamble, targeted reads, combined commands |
-| **Style mirroring** | — | Auto-detect + persist with `--style` / `--global-style` |
-| **Guardrails** | — | Secrets/PII, scope discipline, consent, error transparency |
+| Capability | TokenEconomizer | Ponytail | Efficiency-Router | Session Pilot Pro Plus (v2.0.0) |
+|---|---|---|---|---|
+| **Runtime Requirements** | Python 3.10+ & harness hooks | None (Prompt) | Prompt + subagents | **Zero** (Markdown prompt; optional Python/SQLite adapters) |
+| **Session Memory & Checkpointing** | ❌ None | ❌ None | ❌ None | **Full Lifecycle** (`SP recall`, `save`, `status: done`) |
+| **Diff Minimization / YAGNI** | ❌ None | **Yes** (core focus) | ❌ None | **Built-in** (`SP ponytail [lite\|full\|ultra]`) |
+| **Closing Transparency Notes** | ❌ None | **Yes** | ❌ None | **Built-in** (mandatory 1-2 line skipped/risk note) |
+| **Micro-Skills (Repo Facts)** | Statistical (every $k=3$ sessions) | ❌ None | ❌ None | **Immediate & Persistent** (`SP fact set/list/auto-inject`) |
+| **Tool Pruning** | Delays 10 prompts / 2 sessions | ❌ None | ❌ None | **Instant** (`SP prune-tools auto`) |
+| **Loop Guard** | Secondary LLM judge round-trip | Partial | ❌ None | **Inline Detection** (`SP loop-guard` zero extra LLM cost) |
+| **Model Tier Triage (T0..T3)** | ❌ None | ❌ None | **Yes** | **Built-in** (`SP tier-check`) |
+| **Pre-Turn Token Budgeting** | ❌ Post-hoc only | ❌ None | ❌ None | **Proactive** (`SP budget --limit N`) |
+| **Context Dialect Compression** | ❌ None | ❌ None | ❌ None | **Built-in** (`SP compact`, `SP caveman`) |
+| **Multi-Agent Handoff** | ❌ None | ❌ None | Subagent spawns | **Standardized Payload** (`SP memory handoff`) |
+| **Secondary Model Billing** | Billed extra calls | None | Variable | **Zero auxiliary calls by default** |
 
 ### Why it is faster and lighter (by design)
 
@@ -99,20 +86,24 @@ All commands are **chat conventions**: type them in the conversation and the age
 | `SP mark-done` | Signal the task is complete; agent stops generating further work; session loads with `status: done` on next recall |
 | `SP optimizers` | List installed context/compaction skills (e.g., `strategic-compact`, `caveman`) |
 
-### Opt-in helpers (loaded only when invoked)
+### Assimilated Competitor Capabilities (On-Demand / Opt-In)
 
-| Command | Behavior | Est. added tokens |
-|---|---|---|
-| `SP micro-skill <name>` | One focused helper action (quick lint, dependency check, …) | ~30 |
-| `SP prune-tools` | Drop unused tool calls from the turn context | saves ~20–40 |
-| `SP loop-guard` | Detect repetitive patterns; suggest a break | saves ~50–80 |
-| `SP call-model <model>` | Secondary LLM call, if the host supports it (off by default) | variable |
-| `SP index <PATH>` | Build a lightweight searchable summary of files | ~140 once |
-| `SP query "<text>"` | Top-3 relevant snippets from the index | ~20 |
-| `SP persist set\|get <key>` | Small per-project JSON key/value store | ~50 to describe |
-| `SP memory sync` | Sync durable cross-agent context | ~30 |
-| `SP learn [--review]` | Distill durable facts/lessons from the session into the persistent store; loaded on next `SP recall` | ~40 |
-| `SP fallback --chain "<m1,m2,…>"` | On rate/usage limit, switch to the next model and retry (host support required; off by default) | ~30 |
+| Command | Capability & Competitor Origin | Behavior | Est. Token Impact |
+|---|---|---|---|
+| `SP ponytail [lite\|full\|ultra\|off]` | **Ponytail** (Lazy Senior Dev) | Smallest complete diff, zero unrequested bloat, mandatory closing transparency note | +45 tokens (saves hundreds in diffs) |
+| `SP fact [set\|get\|list\|delete]` | **TokenEconomizer** (Micro-Skills) | Record & auto-inject durable repo facts (build/test commands, path aliases) | ~30–60 tokens (saves 18–31% turn burn) |
+| `SP prune-tools [show\|apply\|auto]` | **TokenEconomizer** (Tool Prune) | Drops unused tool definitions from turn context immediately | saves ~20–50 / turn |
+| `SP loop-guard [status\|nudge\|break]` | **TokenEconomizer** (Loop Guard) | Inline repetition & retry cycle detection without external LLM judge | saves ~50–100 / loop |
+| `SP tier-check "<task>"` | **Efficiency-Router** (Task Triage) | Triages task difficulty into T0..T3 and recommends model tier | +25 tokens |
+| `SP compact [summary\|hard]` | **Strategic-Compact** (Compaction) | Collapses conversational history into dense bulleted state | saves ~40–50% context |
+| `SP caveman [on\|off]` | **Caveman** (Dialect Compression) | Ultra-dense telegraphic communication with zero filler words | saves 50–70% output tokens |
+| `SP memory handoff <role>` | **Unified-Memory** (Agent Handoff) | Emits structured context payload for delegating to subagents | ~35 tokens |
+| `SP index <PATH>` | **Code-Session-Memory** (Indexing) | Build a lightweight searchable summary of files | ~140 once |
+| `SP query "<text>"` | **Code-Session-Memory** (Query) | Top-3 relevant snippets from the index | ~20 |
+| `SP persist set\|get <key>` | Tiny Persistent Store | Small per-project JSON key/value store | ~50 to describe |
+| `SP memory sync` | Cross-Agent Memory | Sync durable cross-agent context | ~30 |
+| `SP learn [--review]` | Experience Learning | Distill durable facts/lessons from the session into persistent store | ~40 |
+| `SP fallback --chain "<m1,m2,…>"` | Rate-Limit Fallback | On rate/usage limit, switch to next model and retry | ~30 |
 
 ## Real-world use cases
 

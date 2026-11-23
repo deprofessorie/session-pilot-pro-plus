@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.db
+.session-pilot-pro-plus/
+.DS_Store

@@ -45,6 +45,14 @@ CREATE TABLE IF NOT EXISTS kv (
     PRIMARY KEY (project, key)
 );
 
+CREATE TABLE IF NOT EXISTS facts (
+    project TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value_json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (project, key)
+);
+
 CREATE TABLE IF NOT EXISTS memory (
     namespace TEXT NOT NULL,
     key TEXT NOT NULL,
@@ -65,8 +73,10 @@ CREATE INDEX IF NOT EXISTS idx_index_project ON index_docs(project);
 """
 
 # ─── Connection ──────────────────────────────────────────────────────────
-def _connect() -> sqlite3.Connection:
-    con = sqlite3.connect(DB_PATH)
+def _connect(db_path: Optional[Path] = None) -> sqlite3.Connection:
+    target = db_path or DB_PATH
+    target.parent.mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(target)
     con.row_factory = sqlite3.Row
     con.executescript(SCHEMA)
     return con
@@ -84,10 +94,14 @@ def _now() -> int:
 class SessionStore:
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = db_path or DB_PATH
-        _connect().close()  # ensure schema exists
+        self.home = self.db_path.parent
+        _connect(self.db_path).close()  # ensure schema exists
 
     def _con(self) -> sqlite3.Connection:
-        return sqlite3.connect(self.db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        con = sqlite3.connect(self.db_path)
+        con.row_factory = sqlite3.Row
+        return con
 
     # ─── Session CRUD ──────────────────────────────────────────────────
     def create(self, session_id: str, title: str = "", goal: str = "") -> dict:
@@ -98,6 +112,7 @@ class SessionStore:
             "status": "active",
             "style": None,
             "global_style": None,
+            "ponytail_mode": None,
             "checkpoints": [],
             "learned_facts": [],
             "created_at": _now(),
@@ -125,6 +140,7 @@ class SessionStore:
         next: str = "",
         style: Optional[str] = None,
         global_style: Optional[str] = None,
+        ponytail_mode: Optional[str] = None,
         skill: Optional[str] = None,
         title: Optional[str] = None,
         goal: Optional[str] = None,
@@ -147,6 +163,8 @@ class SessionStore:
             state["style"] = style
         if global_style is not None:
             state["global_style"] = global_style
+        if ponytail_mode is not None:
+            state["ponytail_mode"] = ponytail_mode
         if title is not None:
             state["title"] = title
         if goal is not None:
@@ -217,6 +235,37 @@ class SessionStore:
         with self._con() as con:
             rows = con.execute("SELECT key FROM kv WHERE project = ?", (project,)).fetchall()
         return [r["key"] for r in rows]
+
+    # ─── Repo Micro-Skills & Fact Bank (SP fact / TokenEconomizer) ─────
+    def fact_set(self, project: str, key: str, value: Any) -> None:
+        """Store a durable repository fact."""
+        with self._con() as con:
+            con.execute(
+                "INSERT OR REPLACE INTO facts (project, key, value_json, updated_at) VALUES (?, ?, ?, ?)",
+                (project, key, json.dumps(value), _now()),
+            )
+
+    def fact_get(self, project: str, key: str) -> Optional[Any]:
+        """Retrieve a repository fact."""
+        with self._con() as con:
+            row = con.execute(
+                "SELECT value_json FROM facts WHERE project = ? AND key = ?", (project, key)
+            ).fetchone()
+        return json.loads(row["value_json"]) if row else None
+
+    def fact_list(self, project: str) -> Dict[str, Any]:
+        """List all verified repository facts for a project."""
+        with self._con() as con:
+            rows = con.execute(
+                "SELECT key, value_json FROM facts WHERE project = ?", (project,)
+            ).fetchall()
+        return {r["key"]: json.loads(r["value_json"]) for r in rows}
+
+    def fact_delete(self, project: str, key: str) -> bool:
+        """Remove a repository fact."""
+        with self._con() as con:
+            cur = con.execute("DELETE FROM facts WHERE project = ? AND key = ?", (project, key))
+        return cur.rowcount > 0
 
     # ─── Cross-Agent Memory ────────────────────────────────────────────
     def memory_write(self, namespace: str, key: str, value: Any) -> None:

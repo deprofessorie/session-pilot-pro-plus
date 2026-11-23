@@ -112,6 +112,27 @@ def test_style_mirroring(store, R: Results):
     store.delete(sid)
 
 
+def test_ponytail(store, R: Results):
+    sid = f"verify-ponytail-{int(time.time())}"
+    store.save(sid, done="impl", next="test", ponytail_mode="ultra")
+    state = store.load(sid)
+    R.check("ponytail_mode persisted", state.get("ponytail_mode") == "ultra", f"got={state.get('ponytail_mode')}")
+    store.delete(sid)
+
+
+def test_facts(store, R: Results):
+    proj, key, val = "verify-facts-proj", "build_cmd", "pnpm run build"
+    store.fact_set(proj, key, val)
+    got = store.fact_get(proj, key)
+    R.check("fact set/get", got == val, f"got={got!r}")
+    all_facts = store.fact_list(proj)
+    R.check("fact list includes key", key in all_facts and all_facts[key] == val, f"facts={all_facts}")
+    deleted = store.fact_delete(proj, key)
+    R.check("fact delete", deleted, "")
+    still_gone = store.fact_get(proj, key)
+    R.check("fact deleted returns None", still_gone is None, "")
+
+
 def test_kv_store(store, R: Results):
     proj, key, val = "verify-kv", "framework", "fastapi"
     store.kv_set(proj, key, val)
@@ -184,10 +205,15 @@ def main():
     store = mod.get_store()
     if args.home:
         store.home = Path(args.home)
+        store.home.mkdir(parents=True, exist_ok=True)
+        if hasattr(store, "db_path"):
+            store.db_path = store.home / "storage.db"
+            mod._connect(store.db_path).close()
         # Ensure dirs exist (attribute names differ slightly per adapter)
         dirs = [
             store.home / "sessions",
             store.home / "kv",
+            store.home / "facts",
             store.home / "memory",
             store.home / "index",
         ]
@@ -196,8 +222,9 @@ def main():
         if hasattr(store, "sessions_dir"):
             store.sessions_dir = dirs[0]
             store.kv_dir = dirs[1]
-            store.memory_dir = dirs[2]
-            store.index_dir = dirs[3]
+            store.facts_dir = dirs[2]
+            store.memory_dir = dirs[3]
+            store.index_dir = dirs[4]
 
     R = Results()
     print(f"Running verification with adapter: {args.adapter}")
@@ -206,6 +233,8 @@ def main():
     try:
         test_core(store, R)
         test_style_mirroring(store, R)
+        test_ponytail(store, R)
+        test_facts(store, R)
         test_kv_store(store, R)
         test_memory_sync(store, R)
         test_semantic_index(store, R)

@@ -444,6 +444,70 @@ SP import C:\Users\deProfessori\.config\opencode\AGENTS.md
 
 ---
 
+## Test 26: Ponytail Mode — Minimal Diff & Transparency Footer
+
+**Prompt:**
+```
+SP ponytail full
+Refactor the add function in utils.py to support variable args.
+```
+
+**Expected:**
+- Smallest possible diff: `def add(*args): return sum(args)`
+- Zero unrequested wrappers, helper functions, or classes
+- Mandatory 1-2 line closing note detailing what was skipped and unverified risks
+
+**Pass criteria:** Smallest complete change with closing transparency note.
+
+---
+
+## Test 27: Repo Fact Bank — Micro-Skills Harvesting
+
+**Prompt:**
+```
+SP fact set test_cmd "pytest -m unit"
+SP fact list
+```
+
+**Expected:**
+- Fact stored: `test_cmd` = `"pytest -m unit"`
+- Fact listed under verified repository facts
+
+**Pass criteria:** Key/value fact persists and displays cleanly.
+
+---
+
+## Test 28: Model Tier Triage — Task Grading & Routing
+
+**Prompt:**
+```
+SP tier-check "Audit the concurrent lock contention in the raft consensus module"
+```
+
+**Expected:**
+- Output identifies task as `T3 (Hard)`
+- Recommends flagship/reasoning model tier
+
+**Pass criteria:** Accurate classification of hard architecture/concurrency tasks.
+
+---
+
+## Test 29: Caveman Dialect — Extreme Quota Compaction
+
+**Prompt:**
+```
+SP caveman on
+Explain what a deadlock is.
+```
+
+**Expected:**
+- Ultra-dense telegraphic explanation with zero conversational filler
+- Retains 100% technical correctness in < 25 words
+
+**Pass criteria:** Concise, high-density dialect with no fluff.
+
+---
+
 ## Scoring
 
 | Category | Tests | Weight |

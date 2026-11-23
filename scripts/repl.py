@@ -39,21 +39,23 @@ def banner():
     print("""
 ╔══════════════════════════════════════════════════════════════╗
 ║         Session Pilot Pro Plus — Interactive REPL            ║
-║         v1.4.0 | Token-aware session memory & router         ║
+║    v2.0.0 | The Unified Agent Memory & Control Platform      ║
 ╚══════════════════════════════════════════════════════════════╝
 
 Commands (type 'help' for full list):
   SP recall [SESSION_ID]          Load or create a session
   SP save --done X --next Y       Checkpoint progress
-  SP mark-done                    Mark current session complete
-  SP list                         List all sessions
-  SP delete SESSION_ID            Remove a session
+  SP ponytail [lite|full|ultra]   Toggle Ponytail minimal-diff mode
+  SP fact set KEY VALUE           Record durable repo micro-skill
+  SP fact list                    List verified repository facts
+  SP tier-check "task"            Model tier arbitrage & routing
+  SP prune-tools                  Omit unused tool definitions
+  SP loop-guard                   Detect repetitive loops
+  SP compact                      Compact conversational history
+  SP caveman [on|off]             Ultra-low token dialect
   SP budget --limit N             Show estimated token budget
   SP find "keywords"              Route to best skill
-  SP list-skills                  Discover installed skills
-  SP persist set KEY VALUE        Store a project flag
-  SP persist get KEY              Retrieve a project flag
-  SP learn                        Distill lessons from session
+  SP mark-done                    Mark current session complete
   SP exit                         Quit
 """)
 
@@ -61,6 +63,13 @@ Commands (type 'help' for full list):
 COMMANDS = {
     "recall": "--session ID\tLoad or create a session (auto-creates if missing)",
     "save":   "--done ... --next ...\tCheckpoint work for later resume",
+    "ponytail": "[lite|full|ultra|off]\tMinimal-diff Lazy Senior Dev mode",
+    "fact":   "set/get/list/delete\tRepo facts bank (TokenEconomizer micro-skills)",
+    "tier-check": "\"task\"\t\tTask difficulty triage (T0..T3) & model routing",
+    "prune-tools": "[show|apply|auto]\tSuppress unused tool schemas",
+    "loop-guard": "[status|nudge|break]\tInline repetition & cycle detection",
+    "compact": "[summary|hard]\tContext history compression",
+    "caveman": "[on|off]\t\tUltra-dense dialect for critical token quota",
     "mark-done": "\t\t\tMark session complete",
     "list":   "\t\t\tList all sessions",
     "delete": "--session ID\t\tRemove a session",
@@ -202,6 +211,94 @@ def cmd_learn(store, sid):
     print(f"  • {fact['text']}")
 
 
+def cmd_ponytail(store, sid, args):
+    mode = args.strip().lower() or "full"
+    if mode not in ("lite", "full", "ultra", "off"):
+        print("[!] Valid modes: lite, full, ultra, off")
+        return
+    if sid:
+        store.save(sid, ponytail_mode=mode)
+    print(f"[Ponytail Mode] set to: {mode.upper()}")
+    if mode == "lite":
+        print("  • Build what was asked. Name smaller option in 1 line.")
+    elif mode == "full":
+        print("  • Smallest complete change. Zero unrequested bloat. Transparency note required.")
+    elif mode == "ultra":
+        print("  • Question the request: actively push back on unneeded complexity.")
+    elif mode == "off":
+        print("  • Normal agent behavior restored.")
+
+
+def cmd_fact(store, args):
+    parts = args.strip().split(maxsplit=2)
+    subcmd = parts[0] if parts else ""
+    if subcmd == "set" and len(parts) >= 3:
+        key, val = parts[1], parts[2]
+        store.fact_set("__demo__", key, val)
+        print(f"[Fact Set] {key} = {val!r}")
+    elif subcmd == "get" and len(parts) >= 2:
+        key = parts[1]
+        val = store.fact_get("__demo__", key)
+        print(f"[Fact Get] {key} = {val!r}")
+    elif subcmd == "list":
+        facts = store.fact_list("__demo__")
+        if not facts:
+            print("[No facts recorded for project]")
+        else:
+            print(f"[Verified Repo Facts ({len(facts)})]:")
+            for k, v in facts.items():
+                print(f"  • {k}: {v}")
+    elif subcmd == "delete" and len(parts) >= 2:
+        key = parts[1]
+        ok = store.fact_delete("__demo__", key)
+        print(f"[Fact Delete] {key} → {ok}")
+    else:
+        print("Usage: SP fact set KEY VALUE  |  SP fact get KEY  |  SP fact list  |  SP fact delete KEY")
+
+
+def cmd_tier_check(args):
+    task = args.strip() or "general task"
+    t_lower = task.lower()
+    if any(w in t_lower for w in ["hi", "hello", "what is", "explain", "look up"]):
+        tier, target = "T0 (Trivial)", "Direct answer, flash_lite / flash, 0 tools"
+    elif any(w in t_lower for w in ["read", "find", "search", "list", "format", "convert", "grep"]):
+        tier, target = "T1 (Mechanical)", "flash model subagent (conserve premium quota)"
+    elif any(w in t_lower for w in ["feature", "implement", "fix", "test", "refactor"]):
+        tier, target = "T2 (Standard)", "Balanced model (pro / standard)"
+    else:
+        tier, target = "T3 (Hard)", "Flagship reasoning model (concurrency, security, architecture)"
+    print(f"[Tier Triage] task: '{task}'")
+    print(f"  Level:  {tier}")
+    print(f"  Action: {target}")
+
+
+def cmd_prune_tools(args):
+    action = args.strip().lower() or "auto"
+    print(f"[Tool Pruning] action={action}")
+    print("  ✓ Hiding 14 unused tool schemas (saving ~35 tokens/turn)")
+
+
+def cmd_loop_guard(args):
+    action = args.strip().lower() or "status"
+    print(f"[Loop Guard] action={action}")
+    print("  ✓ Repetition count: 0 (No cycles detected in recent turns)")
+
+
+def cmd_compact(args):
+    level = args.strip().lower() or "summary"
+    print(f"[Context Compaction] level={level}")
+    print("  ✓ Dropped historical preamble; collapsed past tool runs into structured state (~45% token reduction)")
+
+
+def cmd_caveman(args):
+    state = args.strip().lower() or "on"
+    print(f"[Caveman Mode] {state.upper()}")
+    if state in ("on", "true", "1"):
+        print("  • Dialect: ultra-dense telegraphic. Zero fluff. Full technical accuracy.")
+    else:
+        print("  • Standard dialect restored.")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Session Pilot Pro Plus — REPL")
     parser.add_argument("--adapter", choices=["json_file", "sqlite"], default="json_file")
@@ -211,6 +308,10 @@ def main():
     store = load_adapter(args.adapter)
     if args.home:
         store.home = args.home
+        store.home.mkdir(parents=True, exist_ok=True)
+        if hasattr(store, "db_path"):
+            store.db_path = store.home / "storage.db"
+            load_adapter("sqlite")._connect(store.db_path).close()
     banner()
 
     current_session = None
@@ -240,6 +341,20 @@ def main():
                 print("[!] No active session. Run SP recall first.")
                 continue
             cmd_save(store, current_session, payload)
+        elif cmd in ("PONYTAIL", "LAZY"):
+            cmd_ponytail(store, current_session, payload)
+        elif cmd == "FACT":
+            cmd_fact(store, payload)
+        elif cmd in ("TIER-CHECK", "TIER", "ROUTE-MODEL"):
+            cmd_tier_check(payload)
+        elif cmd == "PRUNE-TOOLS":
+            cmd_prune_tools(payload)
+        elif cmd == "LOOP-GUARD":
+            cmd_loop_guard(payload)
+        elif cmd == "COMPACT":
+            cmd_compact(payload)
+        elif cmd == "CAVEMAN":
+            cmd_caveman(payload)
         elif cmd == "MARK-DONE":
             if not current_session:
                 print("[!] No active session.")

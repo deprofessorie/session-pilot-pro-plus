@@ -33,10 +33,11 @@ HOME.mkdir(parents=True, exist_ok=True)
 
 SESSIONS_DIR = HOME / "sessions"
 KV_DIR = HOME / "kv"
+FACTS_DIR = HOME / "facts"
 MEMORY_DIR = HOME / "memory"
 INDEX_DIR = HOME / "index"
 
-for d in [SESSIONS_DIR, KV_DIR, MEMORY_DIR, INDEX_DIR]:
+for d in [SESSIONS_DIR, KV_DIR, FACTS_DIR, MEMORY_DIR, INDEX_DIR]:
     d.mkdir(exist_ok=True)
 
 
@@ -80,9 +81,10 @@ class SessionStore:
         self.home = home or HOME
         self.sessions_dir = self.home / "sessions"
         self.kv_dir = self.home / "kv"
+        self.facts_dir = self.home / "facts"
         self.memory_dir = self.home / "memory"
         self.index_dir = self.home / "index"
-        for d in [self.sessions_dir, self.kv_dir, self.memory_dir, self.index_dir]:
+        for d in [self.sessions_dir, self.kv_dir, self.facts_dir, self.memory_dir, self.index_dir]:
             d.mkdir(parents=True, exist_ok=True)
 
     # ─── Session CRUD ──────────────────────────────────────────────────
@@ -95,6 +97,7 @@ class SessionStore:
             "status": "active",
             "style": None,
             "global_style": None,
+            "ponytail_mode": None,
             "checkpoints": [],
             "learned_facts": [],
             "created_at": _now(),
@@ -115,6 +118,7 @@ class SessionStore:
         next: str = "",
         style: Optional[str] = None,
         global_style: Optional[str] = None,
+        ponytail_mode: Optional[str] = None,
         skill: Optional[str] = None,
         title: Optional[str] = None,
         goal: Optional[str] = None,
@@ -139,6 +143,8 @@ class SessionStore:
             state["style"] = style
         if global_style is not None:
             state["global_style"] = global_style
+        if ponytail_mode is not None:
+            state["ponytail_mode"] = ponytail_mode
         if title is not None:
             state["title"] = title
         if goal is not None:
@@ -208,6 +214,39 @@ class SessionStore:
         if not proj_dir.exists():
             return []
         return [f.stem for f in proj_dir.glob("*.json")]
+
+    # ─── Repo Micro-Skills & Fact Bank (SP fact / TokenEconomizer) ─────
+    def fact_set(self, project: str, key: str, value: Any) -> None:
+        """Store a durable repository fact (build/test command, linter, path alias)."""
+        proj_dir = self.facts_dir / project
+        proj_dir.mkdir(parents=True, exist_ok=True)
+        _atomic_write(proj_dir / f"{key}.json", {"key": key, "value": value, "updated_at": _now()})
+
+    def fact_get(self, project: str, key: str) -> Optional[Any]:
+        """Retrieve a repository fact."""
+        p = self.facts_dir / project / f"{key}.json"
+        data = _read_json(p)
+        return data["value"] if data else None
+
+    def fact_list(self, project: str) -> Dict[str, Any]:
+        """List all verified repository facts for a project."""
+        proj_dir = self.facts_dir / project
+        if not proj_dir.exists():
+            return {}
+        facts = {}
+        for f in proj_dir.glob("*.json"):
+            data = _read_json(f)
+            if data and "key" in data and "value" in data:
+                facts[data["key"]] = data["value"]
+        return facts
+
+    def fact_delete(self, project: str, key: str) -> bool:
+        """Remove a repository fact."""
+        p = self.facts_dir / project / f"{key}.json"
+        if p.exists():
+            p.unlink()
+            return True
+        return False
 
     # ─── Cross-Agent Memory (SP memory sync) ────────────────────────────
     def memory_write(self, namespace: str, key: str, value: Any) -> None:
