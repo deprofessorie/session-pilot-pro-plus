@@ -63,6 +63,9 @@ jobs:
       - name: Run bench_storage.py
         run: python scripts/bench_storage.py --iterations 50
 
+      - name: Run eval_ab.py (A/B Token & Cost Benchmark)
+        run: python scripts/eval_ab.py
+
   lint-and-docs:
     name: Documentation & LICENSE Verification
     runs-on: ubuntu-latest

@@ -24,7 +24,50 @@ Direct measurements across 100 rapid checkpoint saves, loads, and fact operation
 
 ---
 
-## 2. Capability & Mechanism Classification
+## 2. End-to-End Multi-Turn A/B Evaluation
+
+To measure the compound effect of Session Pilot Pro Plus across multi-turn developer workflows, a reproducible test harness is included in [`scripts/eval_ab.py`](scripts/eval_ab.py).
+
+The harness executes a standardized 15-turn real-world software engineering scenario (scaffolding, test discovery, context interruption & resumption, transaction bug fix, and linting) across two tracks:
+- **Condition A (Baseline / Amnesic Agent):** No persistent task memory, discovery through trial-and-error command execution, verbose conversational padding, and whole-file replacements.
+- **Condition B (Session Pilot Pro Plus):** Checkpoint restoration (`sp.py recall`), pre-cached repository facts (`test_cmd`, `build_cmd`), Ponytail minimal diffs, and lean dialect.
+
+### Empirical Measurements across 15 Turns
+
+| Metric | Condition A (Baseline) | Condition B (Session Pilot Pro Plus) | Absolute Reduction | Overall % Reduction |
+| :--- | :---: | :---: | :---: | :---: |
+| **Total Input Tokens** | **68,510** | **22,465** | **-46,045** | **-67.21%** |
+| **Total Output Tokens** | **3,802** | **712** | **-3,090** | **-81.27%** |
+| **Total Combined Tokens** | **72,312** | **23,177** | **-49,135** | **-67.95%** |
+| **Total Estimated Cost** | **$0.2626** | **$0.0781** | **-$0.1845** | **-70.26%** |
+
+*Calculated at standard pricing: $3.00 / 1M input tokens, $15.00 / 1M output tokens.*
+
+### Workflow Phase Breakdown
+
+| Workflow Phase | Baseline Tokens (Cost) | SP++ Tokens (Cost) | Token Savings | Cost Savings |
+| :--- | :---: | :---: | :---: | :---: |
+| **Phase 1: Initial Scaffolding & Discovery (T1–T5)** | 7,717 ($0.0321) | 5,842 ($0.0212) | **-24.3%** | **-34.1%** |
+| **Phase 2: Context Interruption & Resumption (T6–T8)** | 9,730 ($0.0355) | 4,479 ($0.0145) | **-54.0%** | **-59.2%** |
+| **Phase 3: Bug Fix & Test Verification (T9–T12)** | 28,404 ($0.1118) | 6,964 ($0.0231) | **-75.5%** | **-79.4%** |
+| **Phase 4: Integration, Linting & Checkpointing (T13–T15)** | 26,461 ($0.0832) | 5,892 ($0.0194) | **-77.7%** | **-76.7%** |
+
+### Mechanism Attribution
+1. **Repo Fact Bank (0 Discovery Turns):** Baseline wasted 4 exploration turns trying failing test commands before discovering `pnpm test:unit`. SP++ used cached facts immediately.
+2. **1-Turn Checkpoint Resumption:** Following an interruption at Turn 6, Baseline spent 3 turns re-running git logs, tree listings, and file reads. SP++ restored complete context in 1 turn (~70 tokens).
+3. **Ponytail Minimal Diff Discipline:** On Turn 9, Baseline rewrote an entire 150-line file in the output payload, which permanently inflated context history for all remaining turns (T10–T15). SP++ output a 1-line surgical diff.
+4. **Lean / Caveman Output Dialect:** Eliminated conversational padding, leading to an **81.27% reduction in generated output tokens**.
+
+*Run the A/B evaluation locally:*
+```bash
+python scripts/eval_ab.py
+python scripts/eval_ab.py --markdown
+python scripts/eval_ab.py --json
+```
+
+---
+
+## 3. Capability & Mechanism Classification
 
 In AI agent architectures, capabilities split into two distinct tiers:
 - **● Physical Enforcement:** Intercepts or rewrites the HTTP request/payload or execution lifecycle via runtime hooks or proxies before the LLM sees it.
@@ -44,7 +87,7 @@ In AI agent architectures, capabilities split into two distinct tiers:
 
 ---
 
-## 3. Verified Literature Benchmarks from Peer Tools
+## 4. Verified Literature Benchmarks from Peer Tools
 
 Rather than inventing synthetic comparison figures, Session Pilot Pro Plus directly cites the verified empirical baselines established by peer tools on standard datasets:
 
@@ -67,7 +110,7 @@ Rather than inventing synthetic comparison figures, Session Pilot Pro Plus direc
 
 ---
 
-## 4. Architectural Summary: When to Use What
+## 5. Architectural Summary: When to Use What
 
 1. **Use TokenEconomizer** when you have a Python 3.10+ environment with Claude Code / OpenCode, need automated statistical learning from logs, and have budget for background proposer LLMs.
 2. **Use Ponytail** when you want deep minimal-diff rule files across Cursor, Qoder, Copilot, Cline, and Claude Code.

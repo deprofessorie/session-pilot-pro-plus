@@ -3,7 +3,7 @@
 <div align="center">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python: 3.8+](https://img.shields.io/badge/Python-3.8+-green.svg)](https://www.python.org/)
+[![Python: 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)](https://www.python.org/)
 [![CI: Automated](https://img.shields.io/badge/CI-Automated%20(Ubuntu%20%2B%20Windows)-blue.svg)](.github/workflows/ci.yml)
 [![Tests: 34/34 Passed](https://img.shields.io/badge/Tests-34%2F34%20Passed-brightgreen.svg)](scripts/verify.py)
 [![Reliability Audit: 30/30](https://img.shields.io/badge/Stress%20Audit-30%2F30%20Passed-brightgreen.svg)](tests/stress_audit.py)
@@ -110,7 +110,10 @@ python tests/stress_audit.py --adapter sqlite
 # 3. Storage latency & throughput empirical benchmark
 python scripts/bench_storage.py --iterations 100
 
-# 4. Interactive REPL for local testing
+# 4. Multi-turn end-to-end A/B token & cost evaluation
+python scripts/eval_ab.py
+
+# 5. Interactive REPL for local testing
 python scripts/repl.py --adapter json_file
 ```
 
