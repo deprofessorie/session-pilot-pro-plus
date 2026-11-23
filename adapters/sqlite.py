@@ -4,15 +4,15 @@ Session Pilot Pro Plus — SQLite Storage Adapter
 ================================================
 Better concurrency, faster queries, single file.
 Stdlib only (sqlite3), Python 3.8+.
-
-Usage: same as json_file.py, just import from sqlite instead.
 """
 
 import sqlite3
 import json
 import os
+import re
 import time
 import hashlib
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -21,6 +21,47 @@ DEFAULT_HOME = Path.home() / ".session-pilot-pro-plus"
 HOME = Path(os.environ.get("SESSION_PILOT_HOME", DEFAULT_HOME))
 HOME.mkdir(parents=True, exist_ok=True)
 DB_PATH = HOME / "storage.db"
+
+
+# ─── Security & Sanitization ─────────────────────────────────────────────
+SECRET_PATTERNS = [
+    (re.compile(r'ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}'), '[REDACTED_JWT]'),
+    (re.compile(r'AKIA[0-9A-Z]{16}'), '[REDACTED_AWS_KEY]'),
+    (re.compile(r'(ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{30,})'), '[REDACTED_GITHUB_TOKEN]'),
+    (re.compile(r'sk-[a-zA-Z0-9_\-]{20,}'), '[REDACTED_API_KEY]'),
+    (re.compile(r'Bearer\s+[a-zA-Z0-9_\-\.]{16,}', re.IGNORECASE), 'Bearer [REDACTED_TOKEN]'),
+    (re.compile(r'([a-zA-Z0-9]+:\/\/[^:\s]+:)([^@\s]+)(@)'), r'\1[REDACTED]\3'),
+]
+
+
+def _scrub_string(s: str) -> str:
+    if not isinstance(s, str) or len(s) < 10:
+        return s
+    # Fast path: skip regex if no potential secret signature
+    if not any(token in s for token in ("ey", "AKIA", "ghp_", "github_pat_", "sk-", "Bearer", "bearer", "://")):
+        return s
+    for pat, repl in SECRET_PATTERNS:
+        s = pat.sub(repl, s)
+    return s
+
+
+def _scrub_secrets(obj: Any) -> Any:
+    if isinstance(obj, str):
+        return _scrub_string(obj)
+    if isinstance(obj, dict):
+        return {k: _scrub_secrets(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_scrub_secrets(item) for item in obj]
+    return obj
+
+
+def _safe_json_loads(val: Optional[str]) -> Optional[Any]:
+    if not val:
+        return None
+    try:
+        return json.loads(val)
+    except (json.JSONDecodeError, TypeError):
+        return None
 
 
 # ─── Schema ──────────────────────────────────────────────────────────────
@@ -72,18 +113,24 @@ CREATE TABLE IF NOT EXISTS index_docs (
 CREATE INDEX IF NOT EXISTS idx_index_project ON index_docs(project);
 """
 
-# ─── Connection ──────────────────────────────────────────────────────────
+
+def _init_db(db_path: Path) -> None:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    con = sqlite3.connect(db_path, timeout=10.0)
+    try:
+        con.executescript(SCHEMA)
+    finally:
+        con.close()
+
+
 def _connect(db_path: Optional[Path] = None) -> sqlite3.Connection:
     target = db_path or DB_PATH
-    target.parent.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(target)
-    con.row_factory = sqlite3.Row
-    con.executescript(SCHEMA)
-    return con
+    _init_db(target)
+    return sqlite3.connect(target)
 
 
 def _id_hash(session_id: str) -> str:
-    return hashlib.sha256(session_id.encode()).hexdigest()[:32]
+    return hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:32]
 
 
 def _now() -> int:
@@ -95,13 +142,19 @@ class SessionStore:
     def __init__(self, db_path: Optional[Path] = None):
         self.db_path = db_path or DB_PATH
         self.home = self.db_path.parent
-        _connect(self.db_path).close()  # ensure schema exists
+        _init_db(self.db_path)
 
-    def _con(self) -> sqlite3.Connection:
+    @contextmanager
+    def _con(self):
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        con = sqlite3.connect(self.db_path)
+        con = sqlite3.connect(self.db_path, timeout=15.0, isolation_level=None)
         con.row_factory = sqlite3.Row
-        return con
+        con.execute("PRAGMA journal_mode = WAL;")
+        con.execute("PRAGMA busy_timeout = 15000;")
+        try:
+            yield con
+        finally:
+            con.close()
 
     # ─── Session CRUD ──────────────────────────────────────────────────
     def create(self, session_id: str, title: str = "", goal: str = "") -> dict:
@@ -118,19 +171,23 @@ class SessionStore:
             "created_at": _now(),
             "updated_at": _now(),
         }
+        clean = _scrub_secrets(state)
         with self._con() as con:
             con.execute(
                 "INSERT OR REPLACE INTO sessions (id_hash, id, state_json, updated_at) VALUES (?, ?, ?, ?)",
-                (_id_hash(session_id), session_id, json.dumps(state), state["updated_at"]),
+                (_id_hash(session_id), session_id, json.dumps(clean), state["updated_at"]),
             )
-        return state
+        return clean
 
     def load(self, session_id: str) -> Optional[dict]:
         with self._con() as con:
             row = con.execute(
                 "SELECT state_json FROM sessions WHERE id_hash = ?", (_id_hash(session_id),)
             ).fetchone()
-        return json.loads(row["state_json"]) if row else None
+        if not row:
+            return None
+        data = _safe_json_loads(row["state_json"])
+        return data if isinstance(data, dict) else None
 
     def save(
         self,
@@ -147,8 +204,11 @@ class SessionStore:
         status: Optional[str] = None,
     ) -> dict:
         state = self.load(session_id)
-        if not state:
+        if not isinstance(state, dict):
             state = self.create(session_id, title or "", goal or "")
+
+        if not isinstance(state.get("checkpoints"), list):
+            state["checkpoints"] = []
 
         if done or next:
             state["checkpoints"].append({
@@ -173,12 +233,13 @@ class SessionStore:
             state["status"] = status
 
         state["updated_at"] = _now()
+        clean = _scrub_secrets(state)
         with self._con() as con:
             con.execute(
-                "UPDATE sessions SET state_json = ?, updated_at = ? WHERE id_hash = ?",
-                (json.dumps(state), state["updated_at"], _id_hash(session_id)),
+                "INSERT OR REPLACE INTO sessions (id_hash, id, state_json, updated_at) VALUES (?, ?, ?, ?)",
+                (_id_hash(session_id), session_id, json.dumps(clean), clean["updated_at"]),
             )
-        return state
+        return clean
 
     def mark_done(self, session_id: str) -> dict:
         return self.save(session_id, status="done")
@@ -195,28 +256,30 @@ class SessionStore:
             ).fetchall()
         out = []
         for row in rows:
-            s = json.loads(row["state_json"])
-            out.append({
-                "id": s["id"],
-                "title": s.get("title", ""),
-                "goal": s.get("goal", ""),
-                "status": s.get("status", "active"),
-                "updated_at": s.get("updated_at", 0),
-            })
+            s = _safe_json_loads(row["state_json"])
+            if isinstance(s, dict) and "id" in s:
+                out.append({
+                    "id": s["id"],
+                    "title": s.get("title", ""),
+                    "goal": s.get("goal", ""),
+                    "status": s.get("status", "active"),
+                    "updated_at": s.get("updated_at", 0),
+                })
         return out
 
     def get_or_create(self, session_id: str, title: str = "", goal: str = "") -> dict:
         state = self.load(session_id)
-        if state:
+        if isinstance(state, dict):
             return state
         return self.create(session_id, title, goal)
 
     # ─── Project KV Store ──────────────────────────────────────────────
     def kv_set(self, project: str, key: str, value: Any) -> None:
+        clean = _scrub_secrets(value)
         with self._con() as con:
             con.execute(
                 "INSERT OR REPLACE INTO kv (project, key, value_json, updated_at) VALUES (?, ?, ?, ?)",
-                (project, key, json.dumps(value), _now()),
+                (project, key, json.dumps(clean), _now()),
             )
 
     def kv_get(self, project: str, key: str) -> Any:
@@ -224,7 +287,7 @@ class SessionStore:
             row = con.execute(
                 "SELECT value_json FROM kv WHERE project = ? AND key = ?", (project, key)
             ).fetchone()
-        return json.loads(row["value_json"]) if row else None
+        return _safe_json_loads(row["value_json"]) if row else None
 
     def kv_delete(self, project: str, key: str) -> bool:
         with self._con() as con:
@@ -239,10 +302,11 @@ class SessionStore:
     # ─── Repo Micro-Skills & Fact Bank (SP fact / TokenEconomizer) ─────
     def fact_set(self, project: str, key: str, value: Any) -> None:
         """Store a durable repository fact."""
+        clean = _scrub_secrets(value)
         with self._con() as con:
             con.execute(
                 "INSERT OR REPLACE INTO facts (project, key, value_json, updated_at) VALUES (?, ?, ?, ?)",
-                (project, key, json.dumps(value), _now()),
+                (project, key, json.dumps(clean), _now()),
             )
 
     def fact_get(self, project: str, key: str) -> Optional[Any]:
@@ -251,7 +315,7 @@ class SessionStore:
             row = con.execute(
                 "SELECT value_json FROM facts WHERE project = ? AND key = ?", (project, key)
             ).fetchone()
-        return json.loads(row["value_json"]) if row else None
+        return _safe_json_loads(row["value_json"]) if row else None
 
     def fact_list(self, project: str) -> Dict[str, Any]:
         """List all verified repository facts for a project."""
@@ -259,7 +323,12 @@ class SessionStore:
             rows = con.execute(
                 "SELECT key, value_json FROM facts WHERE project = ?", (project,)
             ).fetchall()
-        return {r["key"]: json.loads(r["value_json"]) for r in rows}
+        out = {}
+        for r in rows:
+            val = _safe_json_loads(r["value_json"])
+            if val is not None:
+                out[r["key"]] = val
+        return out
 
     def fact_delete(self, project: str, key: str) -> bool:
         """Remove a repository fact."""
@@ -269,10 +338,11 @@ class SessionStore:
 
     # ─── Cross-Agent Memory ────────────────────────────────────────────
     def memory_write(self, namespace: str, key: str, value: Any) -> None:
+        clean = _scrub_secrets(value)
         with self._con() as con:
             con.execute(
                 "INSERT OR REPLACE INTO memory (namespace, key, value_json, updated_at) VALUES (?, ?, ?, ?)",
-                (namespace, key, json.dumps(value), _now()),
+                (namespace, key, json.dumps(clean), _now()),
             )
 
     def memory_read(self, namespace: str, key: str) -> Any:
@@ -280,7 +350,7 @@ class SessionStore:
             row = con.execute(
                 "SELECT value_json FROM memory WHERE namespace = ? AND key = ?", (namespace, key)
             ).fetchone()
-        return json.loads(row["value_json"]) if row else None
+        return _safe_json_loads(row["value_json"]) if row else None
 
     # ─── Semantic Search Index ─────────────────────────────────────────
     def index_write(self, project: str, docs: List[Dict[str, Any]]) -> None:

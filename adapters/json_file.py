@@ -4,24 +4,13 @@ Session Pilot Pro Plus — JSON File Storage Adapter
 ====================================================
 Drop-in persistence for OpenCode, Claude Code, Codex CLI, Cursor, Gemini CLI.
 Zero dependencies, stdlib only, Python 3.8+.
-
-Usage (in your AGENTS.md / CLAUDE.md / AGENTS.md):
-    import sys
-    sys.path.append("~/.config/opencode/skills/session-pilot-pro-plus/adapters")
-    from json_file import SessionStore
-    store = SessionStore()
-
-    # On SP save:
-    store.save(session_id, done="...", next="...", style="...", skill="...")
-
-    # On SP recall:
-    state = store.load(session_id)
-    # inject state into context
 """
 
 import json
 import os
+import re
 import time
+import uuid
 import hashlib
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -38,18 +27,53 @@ MEMORY_DIR = HOME / "memory"
 INDEX_DIR = HOME / "index"
 
 for d in [SESSIONS_DIR, KV_DIR, FACTS_DIR, MEMORY_DIR, INDEX_DIR]:
-    d.mkdir(exist_ok=True)
+    d.mkdir(parents=True, exist_ok=True)
+
+
+# ─── Security & Sanitization ─────────────────────────────────────────────
+SECRET_PATTERNS = [
+    (re.compile(r'ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}'), '[REDACTED_JWT]'),
+    (re.compile(r'AKIA[0-9A-Z]{16}'), '[REDACTED_AWS_KEY]'),
+    (re.compile(r'(ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{30,})'), '[REDACTED_GITHUB_TOKEN]'),
+    (re.compile(r'sk-[a-zA-Z0-9_\-]{20,}'), '[REDACTED_API_KEY]'),
+    (re.compile(r'Bearer\s+[a-zA-Z0-9_\-\.]{16,}', re.IGNORECASE), 'Bearer [REDACTED_TOKEN]'),
+    (re.compile(r'([a-zA-Z0-9]+:\/\/[^:\s]+:)([^@\s]+)(@)'), r'\1[REDACTED]\3'),
+]
+
+
+def _scrub_string(s: str) -> str:
+    if not isinstance(s, str) or len(s) < 10:
+        return s
+    # Fast path: skip regex if no potential secret signature
+    if not any(token in s for token in ("ey", "AKIA", "ghp_", "github_pat_", "sk-", "Bearer", "bearer", "://")):
+        return s
+    for pat, repl in SECRET_PATTERNS:
+        s = pat.sub(repl, s)
+    return s
+
+
+def _scrub_secrets(obj: Any) -> Any:
+    if isinstance(obj, str):
+        return _scrub_string(obj)
+    if isinstance(obj, dict):
+        return {k: _scrub_secrets(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_scrub_secrets(item) for item in obj]
+    return obj
+
+
+def _safe_component(name: str) -> str:
+    """Sanitize path component to prevent path traversal and Windows invalid filenames."""
+    if not name:
+        return "_empty"
+    h = hashlib.sha256(name.encode("utf-8")).hexdigest()[:16]
+    clean = re.sub(r'[\x00-\x1f\\/:*?"<>|]+', '_', name).strip('. ')[:32]
+    return f"{clean}_{h}" if clean else f"_{h}"
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────
 def _session_path(session_id: str, base: Optional[Path] = None) -> Path:
-    """Return the file path for a session ID.
-    
-    Args:
-        session_id: The session identifier.
-        base: Optional base directory (defaults to module-level SESSIONS_DIR).
-    """
-    safe = hashlib.sha256(session_id.encode()).hexdigest()[:16]
+    safe = hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:16]
     base = base or SESSIONS_DIR
     return base / f"{safe}.json"
 
@@ -58,18 +82,40 @@ def _now() -> int:
     return int(time.time())
 
 
-def _atomic_write(path: Path, data: dict) -> None:
-    """Write JSON atomically (tmp + rename)."""
+def _atomic_write(path: Path, data: Any) -> None:
+    """Write JSON atomically using UUID tmp file and exponential backoff retry."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-    os.replace(tmp, path)
+    tmp = path.parent / f"{path.stem}.{uuid.uuid4().hex[:8]}.tmp"
+    clean_data = _scrub_secrets(data)
+    content = json.dumps(clean_data, ensure_ascii=False, indent=1)
+    tmp.write_text(content, encoding="utf-8")
+    for attempt in range(8):
+        try:
+            os.replace(tmp, path)
+            return
+        except OSError:
+            if attempt == 7:
+                try:
+                    if path.exists():
+                        path.unlink(missing_ok=True)
+                    os.replace(tmp, path)
+                    return
+                except Exception:
+                    pass
+                if tmp.exists():
+                    try:
+                        tmp.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                raise
+            time.sleep(0.005 * (2 ** attempt))
 
 
 def _read_json(path: Path) -> Optional[dict]:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, (dict, list)) else None
+    except (OSError, json.JSONDecodeError, TypeError):
         return None
 
 
@@ -107,8 +153,11 @@ class SessionStore:
         return state
 
     def load(self, session_id: str) -> Optional[dict]:
-        """Load session state or None if not found."""
-        return _read_json(_session_path(session_id, base=self.sessions_dir))
+        """Load session state or None if not found or malformed."""
+        state = _read_json(_session_path(session_id, base=self.sessions_dir))
+        if not isinstance(state, dict):
+            return None
+        return state
 
     def save(
         self,
@@ -126,8 +175,11 @@ class SessionStore:
     ) -> dict:
         """Append a checkpoint; update optional fields."""
         state = self.load(session_id)
-        if not state:
+        if not isinstance(state, dict):
             state = self.create(session_id, title or "", goal or "")
+
+        if not isinstance(state.get("checkpoints"), list):
+            state["checkpoints"] = []
 
         if done or next:
             state["checkpoints"].append({
@@ -173,7 +225,7 @@ class SessionStore:
         out = []
         for f in self.sessions_dir.glob("*.json"):
             s = _read_json(f)
-            if s:
+            if isinstance(s, dict) and "id" in s:
                 out.append({
                     "id": s["id"],
                     "title": s.get("title", ""),
@@ -186,63 +238,84 @@ class SessionStore:
     def get_or_create(self, session_id: str, title: str = "", goal: str = "") -> dict:
         """Load existing or create new — used by SP recall --session."""
         state = self.load(session_id)
-        if state:
+        if isinstance(state, dict):
             return state
         return self.create(session_id, title, goal)
 
     # ─── Project KV Store (SP persist) ──────────────────────────────────
     def kv_set(self, project: str, key: str, value: Any) -> None:
         """Store a small JSON value per project."""
-        proj_dir = self.kv_dir / project
-        proj_dir.mkdir(exist_ok=True)
-        _atomic_write(proj_dir / f"{key}.json", {"value": value, "updated_at": _now()})
+        safe_proj = _safe_component(project)
+        safe_key = _safe_component(key)
+        proj_dir = self.kv_dir / safe_proj
+        proj_dir.mkdir(parents=True, exist_ok=True)
+        _atomic_write(proj_dir / f"{safe_key}.json", {"key": key, "value": value, "updated_at": _now()})
 
     def kv_get(self, project: str, key: str) -> Any:
-        p = self.kv_dir / project / f"{key}.json"
+        safe_proj = _safe_component(project)
+        safe_key = _safe_component(key)
+        p = self.kv_dir / safe_proj / f"{safe_key}.json"
         data = _read_json(p)
-        return data["value"] if data else None
+        return data["value"] if (isinstance(data, dict) and "value" in data) else None
 
     def kv_delete(self, project: str, key: str) -> bool:
-        p = self.kv_dir / project / f"{key}.json"
+        safe_proj = _safe_component(project)
+        safe_key = _safe_component(key)
+        p = self.kv_dir / safe_proj / f"{safe_key}.json"
         if p.exists():
             p.unlink()
             return True
         return False
 
     def kv_list(self, project: str) -> List[str]:
-        proj_dir = self.kv_dir / project
+        safe_proj = _safe_component(project)
+        proj_dir = self.kv_dir / safe_proj
         if not proj_dir.exists():
             return []
-        return [f.stem for f in proj_dir.glob("*.json")]
+        keys = []
+        for f in proj_dir.glob("*.json"):
+            data = _read_json(f)
+            if isinstance(data, dict) and "key" in data:
+                keys.append(data["key"])
+            else:
+                keys.append(f.stem)
+        return keys
 
     # ─── Repo Micro-Skills & Fact Bank (SP fact / TokenEconomizer) ─────
     def fact_set(self, project: str, key: str, value: Any) -> None:
         """Store a durable repository fact (build/test command, linter, path alias)."""
-        proj_dir = self.facts_dir / project
+        safe_proj = _safe_component(project)
+        safe_key = _safe_component(key)
+        proj_dir = self.facts_dir / safe_proj
         proj_dir.mkdir(parents=True, exist_ok=True)
-        _atomic_write(proj_dir / f"{key}.json", {"key": key, "value": value, "updated_at": _now()})
+        _atomic_write(proj_dir / f"{safe_key}.json", {"key": key, "value": value, "updated_at": _now()})
 
     def fact_get(self, project: str, key: str) -> Optional[Any]:
         """Retrieve a repository fact."""
-        p = self.facts_dir / project / f"{key}.json"
+        safe_proj = _safe_component(project)
+        safe_key = _safe_component(key)
+        p = self.facts_dir / safe_proj / f"{safe_key}.json"
         data = _read_json(p)
-        return data["value"] if data else None
+        return data["value"] if (isinstance(data, dict) and "value" in data) else None
 
     def fact_list(self, project: str) -> Dict[str, Any]:
         """List all verified repository facts for a project."""
-        proj_dir = self.facts_dir / project
+        safe_proj = _safe_component(project)
+        proj_dir = self.facts_dir / safe_proj
         if not proj_dir.exists():
             return {}
         facts = {}
         for f in proj_dir.glob("*.json"):
             data = _read_json(f)
-            if data and "key" in data and "value" in data:
+            if isinstance(data, dict) and "key" in data and "value" in data:
                 facts[data["key"]] = data["value"]
         return facts
 
     def fact_delete(self, project: str, key: str) -> bool:
         """Remove a repository fact."""
-        p = self.facts_dir / project / f"{key}.json"
+        safe_proj = _safe_component(project)
+        safe_key = _safe_component(key)
+        p = self.facts_dir / safe_proj / f"{safe_key}.json"
         if p.exists():
             p.unlink()
             return True
@@ -250,20 +323,25 @@ class SessionStore:
 
     # ─── Cross-Agent Memory (SP memory sync) ────────────────────────────
     def memory_write(self, namespace: str, key: str, value: Any) -> None:
-        ns_dir = self.memory_dir / namespace
-        ns_dir.mkdir(exist_ok=True)
-        _atomic_write(ns_dir / f"{key}.json", {"value": value, "updated_at": _now()})
+        safe_ns = _safe_component(namespace)
+        safe_key = _safe_component(key)
+        ns_dir = self.memory_dir / safe_ns
+        ns_dir.mkdir(parents=True, exist_ok=True)
+        _atomic_write(ns_dir / f"{safe_key}.json", {"key": key, "value": value, "updated_at": _now()})
 
     def memory_read(self, namespace: str, key: str) -> Any:
-        p = self.memory_dir / namespace / f"{key}.json"
+        safe_ns = _safe_component(namespace)
+        safe_key = _safe_component(key)
+        p = self.memory_dir / safe_ns / f"{safe_key}.json"
         data = _read_json(p)
-        return data["value"] if data else None
+        return data["value"] if (isinstance(data, dict) and "value" in data) else None
 
     # ─── Semantic Search Index (SP index / SP query) ────────────────────
     def index_write(self, project: str, docs: List[Dict[str, Any]]) -> None:
         """Store searchable summaries. Each doc: {path, summary, tokens}."""
-        proj_dir = self.index_dir / project
-        proj_dir.mkdir(exist_ok=True)
+        safe_proj = _safe_component(project)
+        proj_dir = self.index_dir / safe_proj
+        proj_dir.mkdir(parents=True, exist_ok=True)
         for i, doc in enumerate(docs):
             _atomic_write(proj_dir / f"{i:06d}.json", {
                 "path": doc["path"],
@@ -274,22 +352,23 @@ class SessionStore:
 
     def index_query(self, project: str, query: str, k: int = 3) -> List[Dict[str, Any]]:
         """Simple keyword overlap search (no embeddings)."""
-        proj_dir = self.index_dir / project
+        safe_proj = _safe_component(project)
+        proj_dir = self.index_dir / safe_proj
         if not proj_dir.exists():
             return []
         query_terms = set(query.lower().split())
         scored = []
         for f in proj_dir.glob("*.json"):
             doc = _read_json(f)
-            if not doc:
+            if not isinstance(doc, dict):
                 continue
-            summary_terms = set(doc["summary"].lower().split())
+            summary_terms = set(doc.get("summary", "").lower().split())
             overlap = len(query_terms & summary_terms)
             if overlap > 0:
                 scored.append((overlap, doc))
         scored.sort(key=lambda x: -x[0])
         return [
-            {"path": d["path"], "snippet": d["summary"][:200], "score": s}
+            {"path": d.get("path", ""), "snippet": d.get("summary", "")[:200], "score": s}
             for s, d in scored[:k]
         ]
 

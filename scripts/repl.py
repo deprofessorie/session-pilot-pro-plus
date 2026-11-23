@@ -97,22 +97,37 @@ def cmd_recall(store, args):
     return sid
 
 
+def time_ago(ts):
+    if not ts:
+        return "never"
+    delta = int(time.time() - ts)
+    if delta < 60:
+        return f"{delta}s ago"
+    if delta < 3600:
+        return f"{delta // 60}m ago"
+    if delta < 86400:
+        return f"{delta // 3600}h ago"
+    return f"{delta // 86400}d ago"
+
+
 def cmd_save(store, sid, args):
     import re
-    m_done = re.search(r"--done\s+(\S+)", args)
-    m_next = re.search(r"--next\s+(\S+)", args)
-    m_style = re.search(r"--style\s+[\"'](.*?)[\"']", args)
-    done = m_done.group(1) if m_done else ""
-    next_step = m_next.group(1) if m_next else ""
-    style = m_style.group(1) if m_style else None
+    m_done = re.search(r'--done(?:\s+|=)(?:"([^"]*)"|\'([^\']*)\'|(\S+))', args)
+    m_next = re.search(r'--next(?:\s+|=)(?:"([^"]*)"|\'([^\']*)\'|(\S+))', args)
+    m_style = re.search(r'--style(?:\s+|=)(?:"([^"]*)"|\'([^\']*)\'|(\S+))', args)
+    
+    done = (m_done.group(1) or m_done.group(2) or m_done.group(3) or "") if m_done else ""
+    next_step = (m_next.group(1) or m_next.group(2) or m_next.group(3) or "") if m_next else ""
+    style = (m_style.group(1) or m_style.group(2) or m_style.group(3) or None) if m_style else None
+    
     state = store.save(sid, done=done, next=next_step, style=style)
     print(f"[Checkpoint saved]  done={done!r}  next={next_step!r}")
-    print(f"  Checkpoints count: {len(state['checkpoints'])}")
+    print(f"  Checkpoints count: {len(state.get('checkpoints', []))}")
 
 
 def cmd_mark_done(store, sid):
     state = store.mark_done(sid)
-    print(f"[Session marked done]  id={sid}  status={state['status']}")
+    print(f"[Session marked done]  id={sid}  status={state.get('status', 'done')}")
 
 
 def cmd_list(store, _args):
@@ -120,10 +135,11 @@ def cmd_list(store, _args):
     if not sessions:
         print("[No sessions found]")
         return
-    print(f"\n{'ID':<20} {'Title':<30} {'Status':<10} {'Updated':>12}")
-    print("-" * 72)
+    print(f"\n{'ID':<20} {'Title':<30} {'Status':<10} {'Updated':>14}")
+    print("-" * 76)
     for s in sessions:
-        print(f"{s['id']:<20} {s['title'][:28]:<30} {s['status']:<10} {s['updated_at']:>12}")
+        ago = time_ago(s.get("updated_at", 0))
+        print(f"{s['id']:<20} {s['title'][:28]:<30} {s['status']:<10} {ago:>14}")
 
 
 def cmd_delete(store, sid):
@@ -259,14 +275,21 @@ def cmd_fact(store, args):
 def cmd_tier_check(args):
     task = args.strip() or "general task"
     t_lower = task.lower()
-    if any(w in t_lower for w in ["hi", "hello", "what is", "explain", "look up"]):
-        tier, target = "T0 (Trivial)", "Direct answer, flash_lite / flash, 0 tools"
-    elif any(w in t_lower for w in ["read", "find", "search", "list", "format", "convert", "grep"]):
-        tier, target = "T1 (Mechanical)", "flash model subagent (conserve premium quota)"
-    elif any(w in t_lower for w in ["feature", "implement", "fix", "test", "refactor"]):
-        tier, target = "T2 (Standard)", "Balanced model (pro / standard)"
-    else:
+    t3_words = ["architecture", "security", "vulnerability", "concurrency", "race condition", "deadlock", "crypto", "exploit", "cve", "distributed"]
+    t2_words = ["feature", "implement", "fix", "test", "refactor", "build", "component"]
+    t1_words = ["read", "find", "search", "list", "format", "convert", "grep"]
+    t0_words = ["hi", "hello", "what is", "explain", "look up", "typo"]
+
+    if any(w in t_lower for w in t3_words):
         tier, target = "T3 (Hard)", "Flagship reasoning model (concurrency, security, architecture)"
+    elif any(w in t_lower for w in t2_words):
+        tier, target = "T2 (Standard)", "Balanced model (pro / standard)"
+    elif any(w in t_lower for w in t1_words):
+        tier, target = "T1 (Mechanical)", "flash model subagent (conserve premium quota)"
+    elif any(w in t_lower for w in t0_words):
+        tier, target = "T0 (Trivial)", "Direct answer, flash_lite / flash, 0 tools"
+    else:
+        tier, target = "T2 (Standard)", "Balanced model (pro / standard)"
     print(f"[Tier Triage] task: '{task}'")
     print(f"  Level:  {tier}")
     print(f"  Action: {target}")
@@ -324,6 +347,12 @@ def main():
             break
         if not raw:
             continue
+
+        # Strip leading 'SP ' prefix if entered by the user
+        if raw.upper().startswith("SP "):
+            raw = raw[3:].strip()
+            if not raw:
+                continue
 
         parts = raw.split(maxsplit=1)
         cmd = parts[0].upper()
