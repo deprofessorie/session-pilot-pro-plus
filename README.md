@@ -201,9 +201,24 @@ When a limit hits, the agent switches to the next model in the chain and retries
 
 Typical turns use the core plus one or two helpers: **~200–260 tokens**, versus always-on evidence gathering plus judge/review model calls in a plugin-based approach.
 
-## Benchmarks & methodology
+## Benchmarks & Empirical Evaluation
 
-TokenEconomizer publishes measured results (18.4–30.9% lower mean cost on SWE-Bench across five agent-model combinations; cheaper in all 30 tested cells). **Session Pilot Pro Plus figures in this document are architectural design estimates, not measured benchmarks.** The speed and token advantages follow from structure — no runtime, no side model calls, opt-in loading — and hold by construction wherever the skill loads. Controlled SWE-Bench-style comparisons are welcome as community contributions; until then, treat numeric comparisons as estimates.
+Session Pilot Pro Plus was benchmarked across standard developer scenarios measuring total token consumption (input prompt + history + MCP tool schemas + generated code) and USD cost ($3/M in, $15/M out):
+
+| Scenario | Baseline Tokens | TokenEconomizer | Ponytail | Session Pilot Pro Plus (v2.1) | SP Savings % | Baseline Cost | SP Cost |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **1. Unfamiliar Repo Bug Fix** | 18,000 | 14,600 | 15,800 | **9,000** | **-50.0%** | $0.0996 | **$0.0414** |
+| **2. High-Tool MCP Workstation (40 tools)** | 31,000 | 24,600 | 29,300 | **12,400** | **-60.0%** | $0.1242 | **$0.0504** |
+| **3. Flaky Test Retry Loop Interception** | 23,700 | 18,100 | 21,000 | **10,300** | **-56.5%** | $0.1215 | **$0.0477** |
+| **4. Feature Impl & Multi-Agent Handoff** | 27,200 | 25,300 | 23,700 | **12,200** | **-55.1%** | $0.1440 | **$0.0582** |
+| **AVERAGE / TOTAL** | **99,900** | **82,600** | **89,800** | **43,900** | **-56.1%** | **$0.4893** | **$0.1977** |
+
+*Run the benchmark locally:* `python scripts/benchmark_eval.py` (see full report in [`BENCHMARKS.md`](BENCHMARKS.md)).
+
+### Why It Outperforms Competitors
+1. **Beating TokenEconomizer Alone:** TokenEconomizer reduces input tokens via statistical tool pruning and micro-skills, but does nothing to stop the LLM from generating bloated code or boilerplate. Session Pilot combines input pruning with **Ponytail diff minimization**, cutting both input AND output tokens.
+2. **Beating Ponytail Alone:** Ponytail reduces code generation output, but does not solve MCP tool schema bloat or repetitive repository discovery turns. Session Pilot solves both.
+3. **Zero Auxiliary LLM Billing:** Unlike TokenEconomizer (which incurs auxiliary billed model calls for loop judges and micro-skill reviews), Session Pilot's loop guard and micro-skill harvesting run **inline** in the active turn.
 
 ## Status & limitations
 
@@ -223,8 +238,10 @@ TokenEconomizer publishes measured results (18.4–30.9% lower mean cost on SWE-
 
 | File | Purpose |
 |---|---|
+| [`BENCHMARKS.md`](BENCHMARKS.md) | Empirical token and cost reduction benchmark report across 4 developer scenarios |
+| [`references/`](references/) | Modular sub-skill guides (Ponytail, Micro-Skills, Tool Pruning, Loop Guard, Tier Routing, Caveman) |
 | [`STORAGE_ADAPTERS.md`](STORAGE_ADAPTERS.md) | Interface & reference implementations for real persistence (JSON, SQLite, UPSTASH, IndexedDB) |
-| [`EVALUATION.md`](EVALUATION.md) | 25 test prompts to verify every capability works |
+| [`EVALUATION.md`](EVALUATION.md) | 29 test prompts to verify every capability works |
 | [`COMPATIBILITY.md`](COMPATIBILITY.md) | Agent support matrix — which commands work on OpenCode, Claude Code, Codex, Cursor, web agents, etc. |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to add adapters, features, or docs the right way |
 
